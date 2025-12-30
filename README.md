@@ -1,7 +1,7 @@
 SPARXSTAR Photon VCard
-=====================+
+======================
 
-**Version:** 3.1.0\
+**Version:** 0.5.0
 **Status:** Production / Master Edition\
 **Scope:** Client-side runtime (inline JavaScript)
 **Author** Starisian Technolog (Max Barrett)
