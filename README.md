@@ -1,5 +1,5 @@
-SPARXSTAR Photon VCard --- JavaScript Runtime
-=============================================
+SPARXSTAR Photon VCard
+=====================+
 
 **Version:** 3.1.0\
 **Status:** Production / Master Edition\
