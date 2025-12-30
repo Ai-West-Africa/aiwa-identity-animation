@@ -1,0 +1,60 @@
+# Agent Information
+
+This file contains information about automated agents, bots, and CI/CD processes used in the SPARXSTAR Photo VCard project.
+
+## Automated Agents
+
+### Development Agents
+
+- **Code Quality Agents**: Automated tools for code linting and style checking
+- **Security Scanning Agents**: Automated security vulnerability scanning
+- **Dependency Update Agents**: Automated dependency version checking and updates
+
+### Testing Agents
+
+- **Continuous Integration (CI)**: Automated testing on code commits
+- **Automated Testing**: Unit tests, integration tests, and end-to-end tests
+- **Performance Testing**: Automated performance benchmarking
+
+### Deployment Agents
+
+- **Build Agents**: Automated build processes
+- **Deployment Agents**: Automated deployment to staging and production environments
+- **Release Management**: Automated version tagging and release notes generation
+
+## Agent Configuration
+
+Agents are configured to:
+- Run automatically on pull requests
+- Perform security checks before merging
+- Ensure code quality standards are met
+- Validate compatibility with PHP 8.2+ and WordPress 6.8+
+
+## Agent Permissions
+
+All agents operate with least privilege principles and have limited access to:
+- Read repository contents
+- Run tests and builds
+- Report results and create checks
+- Update status on pull requests
+
+Agents do NOT have permission to:
+- Directly merge code
+- Modify protected branches without approval
+- Access production credentials directly
+
+## Adding New Agents
+
+To add new automated agents to the project:
+1. Document the agent's purpose and functionality
+2. Define required permissions and access levels
+3. Configure appropriate security controls
+4. Update this file with agent details
+
+## Contact
+
+For questions about agents and automation, contact Starisian Technologies.
+
+---
+
+Last Updated: December 30, 2025
