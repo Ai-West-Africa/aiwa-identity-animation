@@ -1,26 +1,5 @@
 <?php
-/**
- * SPARXSTAR Photon VCard
- * @version           0.5.0
- * @package           sparxstar-photon-vcard
- * @author            Starisian Technologies (Max Barrett) <support@starisian.com>
- * @copyright         2025 Starisian Technologies. All rights reserved.
- * @license           Starisian Technologies Proprietary
- *
- * @wordpress-plugin
- * Plugin Name:       SPARXSTAR Photon VCard
- * Plugin URI:        https://starisian.com/sparxstar/sparxstar-photon-vcard
- * Description:       roduction-grade digital business card with motion/touch triggers. Finalized for accessibility, security, and legacy hardware resilience.
- * Version:           0.5.0
- * Requires at least: 6.8
- * Requires PHP:      8.2
- * Author:            Starisian Technologies (Max Barrett) <support@starisian.com>
- * Author URI:        https://starisian.com
- * Text Domain:       sparxstar-photon-vcard
- * License:           Starisian Technologies Proprietary
- * License URI:       https://starisian.com/license/starisian-technology-proprietary
- * Update URI:        https://starisian.com/sparxstar/sparxstar-photon-vcard/update
- */
+
 
 declare(strict_types=1);
 
