@@ -1,3 +1,6 @@
+<img width="1280" height="640" alt="sparxstar_photon" src="https://github.com/user-attachments/assets/92c4f1dd-8cea-4273-87fe-3415c5d83412" />
+
+
 SPARXSTAR Photon VCard
 ======================
 
