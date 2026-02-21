@@ -1,0 +1,16 @@
+{
+  "name": "sparxstar-photon-vcard",
+  "version": "1.0.0",
+  "description": "SPARXSTAR Photon VCard — WordPress plugin build tooling",
+  "private": true,
+  "scripts": {
+    "build:css": "cleancss -o assets/css/sparxstar-photon-vcard.min.css src/css/sparxstar-photon-vcard.css",
+    "build:js": "uglifyjs src/js/sparxstar-photon-vcard.js -o assets/js/sparxstar-photon-vcard.min.js --compress --mangle",
+    "build": "npm run build:css && npm run build:js",
+    "copy:assets": "cp src/css/sparxstar-photon-vcard.css assets/css/sparxstar-photon-vcard.css && cp src/js/sparxstar-photon-vcard.js assets/js/sparxstar-photon-vcard.js"
+  },
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "uglify-js": "^3.19.3"
+  }
+}
