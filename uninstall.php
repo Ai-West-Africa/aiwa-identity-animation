@@ -42,12 +42,22 @@ function sparxstar_photon_vcard_delete_user_meta() {
 	global $wpdb;
 
 	// Delete user meta keys associated with this plugin.
-	$wpdb->query(
+	$deleted_rows = $wpdb->query(
 		$wpdb->prepare(
 			"DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s",
 			$wpdb->esc_like( 'sparxstar_photon_vcard_' ) . '%'
 		)
 	);
+
+	// Log database errors to avoid silent failures that could leave orphaned data.
+	if ( false === $deleted_rows ) {
+		error_log(
+			sprintf(
+				'Sparxstar Photon VCard uninstall: Failed to delete user meta. Database error: %s',
+				$wpdb->last_error
+			)
+		);
+	}
 }
 
 /**
