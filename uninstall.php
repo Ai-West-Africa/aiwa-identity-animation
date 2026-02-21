@@ -68,7 +68,7 @@ function sparxstar_photon_vcard_delete_tables() {
 function sparxstar_photon_vcard_delete_uploads() {
 	// Get WordPress uploads directory.
 	$upload_dir = wp_upload_dir();
-	$plugin_upload_dir = $upload_dir['basedir'] . '/sparxstar-photon-vcard';
+	$plugin_upload_dir = trailingslashit( $upload_dir['basedir'] ) . 'sparxstar-photon-vcard';
 
 	// Delete plugin upload directory if it exists.
 	if ( is_dir( $plugin_upload_dir ) ) {
