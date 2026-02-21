@@ -5,6 +5,11 @@
    @copyright
    ========================================== */
 
+/* Fix 3: prevent iOS rubber-band bounce behind fixed overlay */
+html, body {
+overscroll-behavior: none;
+}
+
 /* Base Overlay */
 #spax-photon-card-overlay {
 display: none;
@@ -20,12 +25,20 @@ justify-content: center;
 
 font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 text-align: center;
-padding: 40px 24px;
+/* Fix 2: safe-area padding for notch / home bar */
+padding:
+max(40px, env(safe-area-inset-top))
+24px
+max(40px, env(safe-area-inset-bottom));
 box-sizing: border-box;
 
 opacity: 0;
 transition: opacity 0.25s ease-out;
-touch-action: none;
+/* Fix 1: use manipulation to preserve accessibility gestures */
+touch-action: manipulation;
+/* Fix 5: push overlay onto GPU for smoother animation */
+will-change: opacity, transform;
+transform: translateZ(0);
 }
 
 /* Active State */
@@ -77,7 +90,10 @@ justify-content: center;
 background: #fff;
 padding: 14px;
 border-radius: 16px;
-box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+box-shadow:
+0 0 0 1px rgba(255,255,255,0.06),
+0 10px 40px rgba(0,0,0,0.6),
+0 0 40px rgba(255,255,255,0.05);
 }
 
 /* Action Buttons Row */
@@ -94,6 +110,8 @@ width: 100%;
 .spax-photon-btn {
 flex: 1 1 120px;
 padding: 14px 18px;
+/* Fix: WCAG minimum tap target size */
+min-height: 44px;
 background: transparent;
 color: #fff;
 border: 1px solid #444;
@@ -119,6 +137,8 @@ color: #777;
 font-size: 0.9rem;
 cursor: pointer;
 opacity: 0.7;
+/* Fix: WCAG minimum tap target size */
+min-height: 44px;
 }
 
 .spax-photon-close:hover {
@@ -126,11 +146,24 @@ opacity: 1;
 color: #fff;
 }
 
-/* Focus States */
+/* Fix 6: only show focus rings for keyboard navigation, not mouse clicks */
 .spax-photon-close:focus,
 .spax-photon-btn:focus {
+outline: none;
+}
+.spax-photon-close:focus-visible,
+.spax-photon-btn:focus-visible {
 outline: 2px solid #fff;
 outline-offset: 4px;
+}
+
+/* Fix 4: prevent hover state "sticking" on touch screens */
+@media (hover: none) {
+.spax-photon-btn:hover {
+background: transparent;
+color: #fff;
+border-color: #444;
+}
 }
 
 /* Setup Trigger Button */
@@ -140,6 +173,7 @@ bottom: 25px;
 right: 25px;
 z-index: 9999;
 padding: 14px 24px;
+min-height: 44px;
 background: #fff;
 color: #000;
 border: none;
@@ -152,4 +186,10 @@ animation: spaxPhotonSlideUp 0.6s ease-out;
 @keyframes spaxPhotonSlideUp {
 from { transform: translateY(50px); opacity: 0; }
 to { transform: translateY(0); opacity: 1; }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+#spax-photon-card-overlay { transition: none; }
+#spax-photon-sensor-grant { animation: none; }
 }
