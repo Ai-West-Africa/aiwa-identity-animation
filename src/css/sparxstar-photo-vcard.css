@@ -5,12 +5,18 @@
    @copyright
    ========================================== */
 
+/* Fix 2: Prevent iOS bounce / rubberband behind fixed body */
+html, body {
+	overscroll-behavior: none;
+}
+
 /* Base Overlay */
 #vip-card-overlay {
 	display: none;
 	position: fixed;
 	inset: 0;
-	background-color: rgba(0,0,0,0.96);
+	/* Fix 9: improve contrast for outdoor / sunlight use */
+	background-color: rgba(0,0,0,0.98);
 	color: #fff;
 	z-index: 999999;
 
@@ -20,18 +26,28 @@
 
 	font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	text-align: center;
-	padding: 40px 24px;
+	/* Fix 5: safe area padding for iPhone notch / Dynamic Island */
+	padding:
+		max(40px, env(safe-area-inset-top))
+		24px
+		max(40px, env(safe-area-inset-bottom));
 	box-sizing: border-box;
 
 	opacity: 0;
 	transition: opacity 0.25s ease-out;
-	touch-action: none;
+	/* Fix 3: use manipulation instead of none to preserve accessibility gestures */
+	touch-action: manipulation;
+	/* Fix 1: GPU-accelerate to prevent frame drops on low-end Android */
+	will-change: opacity, transform;
+	transform: translateZ(0);
 }
 
 /* Active State */
 body.vip-card-active #vip-card-overlay {
 	display: flex;
 	opacity: 1;
+	/* Power: card entrance motion for premium feel */
+	animation: vipFadeIn 0.28s ease-out;
 }
 
 body.vip-card-active {
@@ -77,7 +93,17 @@ body.vip-card-active {
 	background: #fff;
 	padding: 14px;
 	border-radius: 16px;
-	box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+	/* Power: glass glow for better scan success in low light */
+	box-shadow:
+		0 0 0 1px rgba(255,255,255,0.05),
+		0 12px 50px rgba(0,0,0,0.7),
+		0 0 40px rgba(255,255,255,0.05);
+}
+
+/* Fix 7: prevent QR canvas blur on high-DPI / Retina displays */
+.vc-qr canvas {
+	image-rendering: crisp-edges;
+	image-rendering: pixelated;
 }
 
 /* Action Buttons Row */
@@ -94,6 +120,8 @@ body.vip-card-active {
 .vc-btn {
 	flex: 1 1 120px;
 	padding: 14px 18px;
+	/* Fix 6: WCAG minimum tap target */
+	min-height: 44px;
 	background: transparent;
 	color: #fff;
 	border: 1px solid #444;
@@ -104,10 +132,24 @@ body.vip-card-active {
 	transition: background 0.2s ease, border 0.2s ease;
 }
 
+/* Power: subtle button press feedback */
+.vc-btn:active {
+	transform: scale(0.97);
+}
+
 .vc-btn:hover {
 	background: #fff;
 	color: #000;
 	border-color: #fff;
+}
+
+/* Fix 10: prevent hover flash on touch devices */
+@media (hover: none) {
+	.vc-btn:hover {
+		background: transparent;
+		color: #fff;
+		border-color: #444;
+	}
 }
 
 /* Close Button — Subtle */
@@ -119,6 +161,8 @@ body.vip-card-active {
 	font-size: 0.9rem;
 	cursor: pointer;
 	opacity: 0.7;
+	/* Fix 6: WCAG minimum tap target */
+	min-height: 44px;
 }
 
 .vc-close:hover {
@@ -149,10 +193,24 @@ body.vip-card-active {
 	animation: vipSlideUp 0.6s ease-out;
 }
 
-.vc-qr { margin: 0 auto 35px; width: 220px; height: 220px; background:#fff; padding:14px; border-radius: 16px; }
-.vc-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; width:100%; max-width: 360px; }
-
 @keyframes vipSlideUp {
 	from { transform: translateY(50px); opacity: 0; }
 	to { transform: translateY(0); opacity: 1; }
+}
+
+/* Power: card entrance motion */
+@keyframes vipFadeIn {
+	from { opacity: 0; transform: scale(0.98); }
+	to { opacity: 1; transform: scale(1); }
+}
+
+/* Fix 8: respect OS reduced-motion accessibility setting */
+@media (prefers-reduced-motion: reduce) {
+	#vip-card-overlay {
+		transition: none;
+		animation: none;
+	}
+	#vip-sensor-grant {
+		animation: none;
+	}
 }

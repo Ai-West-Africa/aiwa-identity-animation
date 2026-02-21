@@ -17,6 +17,27 @@ class SparxstarPhotonVCard {
 	 */
 	public static function init(): void {
 		add_action( 'wp_footer', [ __CLASS__, 'render_optimized_assets' ], 99 );
+		// Fix 4: enqueue QR library from plugin assets for reliability (no CDN dependency)
+		add_action( 'wp_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
+	}
+
+	/**
+	 * Enqueue plugin assets.
+	 */
+	public static function enqueue_assets(): void {
+		if ( ! is_user_logged_in() || ! is_singular() ) {
+			return;
+		}
+		$qr_path = SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'assets/js/qrcode.min.js';
+		if ( file_exists( $qr_path ) ) {
+			wp_enqueue_script(
+				'spax-photon-qrcode',
+				SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/qrcode.min.js',
+				[],
+				SPARXSTAR_PHOTON_VCARD_VERSION,
+				true
+			);
+		}
 	}
 
 	/**
@@ -76,19 +97,29 @@ class SparxstarPhotonVCard {
 		);
 		?>
 		<style id="vip-motion-css">
+			/* Fix 2: Prevent iOS bounce / rubberband behind fixed body */
+			html, body { overscroll-behavior: none; }
+
 			/* Base Overlay: Accessibility & Layout */
 			#vip-card-overlay {
 				display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-				background-color: rgba(0,0,0,0.96); color: #fff; z-index: 999999;
+				/* Fix 9: improve contrast for outdoor use */
+				background-color: rgba(0,0,0,0.98); color: #fff; z-index: 999999;
 				flex-direction: column; align-items: center; justify-content: center;
 				font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-				text-align: center; padding: 20px; box-sizing: border-box;
+				text-align: center;
+				/* Fix 5: safe area padding for notch / Dynamic Island */
+				padding: max(40px, env(safe-area-inset-top)) 24px max(40px, env(safe-area-inset-bottom));
+				box-sizing: border-box;
 				opacity: 0; transition: opacity 0.25s ease-out;
-				touch-action: none; /* Prevent scroll-through */
+				/* Fix 3: use manipulation to preserve accessibility gestures */
+				touch-action: manipulation;
+				/* Fix 1: GPU-accelerate overlay animation */
+				will-change: opacity, transform; transform: translateZ(0);
 			}
 			
 			/* Active States */
-			body.vip-card-active #vip-card-overlay { display: flex; opacity: 1; }
+			body.vip-card-active #vip-card-overlay { display: flex; opacity: 1; animation: vipFadeIn 0.28s ease-out; }
 			
 			/* iOS Safe Scroll Lock */
 			body.vip-card-active { position: fixed; width: 100%; overflow: hidden; }
@@ -101,14 +132,24 @@ class SparxstarPhotonVCard {
 			/* Interaction */
 			.vc-btn {
 				display: block; width: 100%; max-width: 320px; padding: 16px; margin: 10px 0;
+				/* Fix 6: WCAG minimum tap target */
+				min-height: 44px;
 				background: #1a1a1a; color: #fff; text-decoration: none;
 				border: 1px solid #333; border-radius: 12px; font-size: 1.1rem; font-weight: 600;
 				transition: transform 0.1s, background 0.2s;
 			}
-			.vc-btn:active { transform: scale(0.98); background: #333; }
+			/* Power: button press feedback */
+			.vc-btn:active { transform: scale(0.97); background: #333; }
+			/* Fix 10: prevent hover flash on touch devices */
+			@media (hover: none) { .vc-btn:hover { background: #1a1a1a; color: #fff; } }
 			
 			/* Close Button */
-			.vc-close { margin-top: 45px; background: transparent; border: 1px solid #666; color: #999; padding: 12px 35px; border-radius: 30px; cursor: pointer; }
+			.vc-close {
+				margin-top: 45px; background: transparent; border: 1px solid #666; color: #999;
+				padding: 12px 35px; border-radius: 30px; cursor: pointer;
+				/* Fix 6: WCAG minimum tap target */
+				min-height: 44px;
+			}
 			.vc-close:focus, .vc-btn:focus { outline: 2px solid #fff; outline-offset: 4px; }
 
 			/* Setup Trigger */
@@ -120,6 +161,13 @@ class SparxstarPhotonVCard {
 				animation: vipSlideUp 0.6s ease-out;
 			}
 			@keyframes vipSlideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+			/* Power: card entrance motion */
+			@keyframes vipFadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+			/* Fix 8: respect OS reduced-motion setting */
+			@media (prefers-reduced-motion: reduce) {
+				#vip-card-overlay { transition: none; animation: none; }
+				#vip-sensor-grant { animation: none; }
+			}
 		</style>
 
 		<script>
@@ -139,7 +187,9 @@ class SparxstarPhotonVCard {
 						resetTime: 2500,
 						cooldown: 5000,
 						stabilize: 150,
-						longPress: 800
+						longPress: 800,
+						permissionTimeout: 2000,       // iOS permission promise timeout (ms)
+						gammaStabilityThreshold: 20    // max gamma for face-down detection (degrees)
 					};
 
 					this.state = {
@@ -153,6 +203,7 @@ class SparxstarPhotonVCard {
 					};
 
 					this.timers = { sensor: 0, stabilizer: null, longPress: null };
+					this.lastFocus = null;
 					
 					this.init();
 				}
@@ -164,6 +215,9 @@ class SparxstarPhotonVCard {
 					if (!reducedMotion && !userData.noSensor) {
 						this.setupMotion();
 					}
+
+					// Fix 3: release wake lock on page hide to prevent leak during navigation
+					window.addEventListener('pagehide', () => this.releaseWakeLock && this.releaseWakeLock());
 
 					// Fallbacks (Always active)
 					this.setupFallbacks();
@@ -204,7 +258,10 @@ class SparxstarPhotonVCard {
 
 					try {
 						if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+							// Fix 5: timeout fallback in case permission promise never resolves
+							const timeout = setTimeout(() => this.renderSetupButton(), this.config.permissionTimeout);
 							const response = await DeviceOrientationEvent.requestPermission();
+							clearTimeout(timeout);
 							if (response === 'granted') this.enableSensors();
 						} else {
 							this.enableSensors();
@@ -225,6 +282,8 @@ class SparxstarPhotonVCard {
 					if (!this.state.sensorBound) return;
 					window.removeEventListener('deviceorientation', this.boundHandler);
 					this.state.sensorBound = false;
+					// Fix 1: mark as disabled so iOS re-requests permission on next open
+					this.storage('vip_motion_enabled', 'false');
 				}
 
 				handleOrientation(event) {
@@ -236,7 +295,9 @@ class SparxstarPhotonVCard {
 					this.timers.sensor = now;
 
 					const beta = Math.abs(event.beta || 0);
-					const isFlat = beta > this.config.threshold;
+					// Fix 2: add gamma stability check to reduce false positives (table/pocket)
+					const gamma = Math.abs(event.gamma || 0);
+					const isFlat = beta > this.config.threshold && gamma < this.config.gammaStabilityThreshold;
 
 					if (isFlat && !this.state.isFaceDown) {
 						if (!this.timers.stabilizer) {
@@ -312,6 +373,9 @@ class SparxstarPhotonVCard {
 					// Cooldown & Duplicate Check
 					if (Date.now() - this.state.lastCloseTime < this.config.cooldown) return;
 					if (this.state.isActive || document.getElementById('vip-card-overlay')) return;
+
+					// Fix 7: store focus for restoration on close
+					this.lastFocus = document.activeElement;
 
 					this.state.isActive = true;
 					this.disableSensors();
@@ -398,6 +462,19 @@ class SparxstarPhotonVCard {
 					
 					this.state.isActive = false;
 					this.state.lastCloseTime = Date.now();
+					// Fix 10: prevent immediate re-trigger after close
+					this.state.isFaceDown = false;
+					this.state.taps = 0;
+
+					// Fix 8: clean up pending timers to avoid memory leaks
+					if (this.timers.stabilizer) {
+						clearTimeout(this.timers.stabilizer);
+						this.timers.stabilizer = null;
+					}
+					if (this.timers.longPress) {
+						clearTimeout(this.timers.longPress);
+						this.timers.longPress = null;
+					}
 
 					// ANALYTICS CLOSE EVENT
 					document.dispatchEvent(new CustomEvent('vip-card-event', { 
@@ -406,8 +483,16 @@ class SparxstarPhotonVCard {
 
 					setTimeout(() => {
 						overlay.remove();
+
+						// Fix 7: restore focus for accessibility
+						if (this.lastFocus) {
+							this.lastFocus.focus();
+							this.lastFocus = null;
+						}
+
+						// Fix 1: re-request sensor access (iOS requires permission re-gesture)
 						if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !userData.noSensor) {
-							this.enableSensors();
+							this.requestSensorAccess();
 						}
 					}, 250);
 				}

@@ -20,7 +20,9 @@
 				stabilize: 150,        // stabilization window (ms)
 				longPress: 800,        // long press duration (ms)
 				sensorFps: 10,         // throttle orientation (fps)
-				sensorAutoDisable: 30000 // battery saver (ms)
+				sensorAutoDisable: 30000, // battery saver (ms)
+				permissionTimeout: 2000,  // iOS permission promise timeout (ms)
+				gammaStabilityThreshold: 20 // max gamma for face-down detection (degrees)
 			};
 
 			this.state = {
@@ -42,6 +44,7 @@
 
 			this.boundOrientationHandler = null;
 			this.wakeLock = null;
+			this.lastFocus = null;
 
 			this.init();
 		}
@@ -60,6 +63,9 @@
 			if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
 				this.setupMotion();
 			}
+
+			// Fix 3: release wake lock on page hide to prevent leak during navigation
+			window.addEventListener('pagehide', () => this.releaseWakeLock());
 
 			// Fallback triggers always active
 			this.setupFallbacks();
@@ -123,7 +129,10 @@
 				// iOS 13+ permission model
 				if (typeof DeviceOrientationEvent !== 'undefined' &&
 					typeof DeviceOrientationEvent.requestPermission === 'function') {
+					// Fix 5: timeout fallback in case permission promise never resolves
+					const timeout = setTimeout(() => this.renderSetupButton(), this.config.permissionTimeout);
 					const response = await DeviceOrientationEvent.requestPermission();
+					clearTimeout(timeout);
 					if (response === 'granted') this.enableSensors();
 				} else {
 					// Android/others
@@ -153,6 +162,8 @@
 			if (!this.state.sensorBound) return;
 			window.removeEventListener('deviceorientation', this.boundOrientationHandler);
 			this.state.sensorBound = false;
+			// Fix 1: mark as disabled so iOS re-requests permission on next open
+			this.storage('vip_motion_enabled', 'false');
 
 			if (this.timers.sensorAutoDisable) {
 				clearTimeout(this.timers.sensorAutoDisable);
@@ -181,7 +192,9 @@
 			this.timers.sensorTick = now;
 
 			const beta = Math.abs(event.beta || 0);
-			const isFlat = beta > this.config.threshold;
+			// Fix 2: add gamma stability check to reduce false positives (table/pocket)
+			const gamma = Math.abs(event.gamma || 0);
+			const isFlat = beta > this.config.threshold && gamma < this.config.gammaStabilityThreshold;
 
 			// Stabilization
 			if (isFlat && !this.state.isFaceDown) {
@@ -267,6 +280,9 @@
 			// Cooldown & duplicate check
 			if (Date.now() - this.state.lastCloseTime < this.config.cooldown) return;
 			if (this.state.isActive || document.getElementById('vip-card-overlay')) return;
+
+			// Fix 7: store focus for restoration on close
+			this.lastFocus = document.activeElement;
 
 			this.state.isActive = true;
 			this.disableSensors();
@@ -386,6 +402,19 @@
 
 			this.state.isActive = false;
 			this.state.lastCloseTime = Date.now();
+			// Fix 10: prevent immediate re-trigger after close
+			this.state.isFaceDown = false;
+			this.state.taps = 0;
+
+			// Fix 8: clean up pending timers to avoid memory leaks on repeated open/close
+			if (this.timers.stabilizer) {
+				clearTimeout(this.timers.stabilizer);
+				this.timers.stabilizer = null;
+			}
+			if (this.timers.longPress) {
+				clearTimeout(this.timers.longPress);
+				this.timers.longPress = null;
+			}
 
 			// Analytics hook
 			document.dispatchEvent(new CustomEvent('vip-card-event', {
@@ -394,10 +423,16 @@
 
 			overlay.remove();
 
-			// Re-enable sensors if allowed
+			// Fix 7: restore focus for accessibility
+			if (this.lastFocus) {
+				this.lastFocus.focus();
+				this.lastFocus = null;
+			}
+
+			// Fix 1: re-request sensor access (iOS requires permission re-gesture after removal)
 			const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 			if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
-				this.enableSensors();
+				this.requestSensorAccess();
 			}
 
 			this.releaseWakeLock();
@@ -408,7 +443,9 @@
 		---------------------------- */
 
 		shareCard() {
+			// Fix 9: guard against desktop Chrome exposing share but rejecting
 			if (!navigator.share) return;
+			if (!navigator.canShare || !navigator.canShare({ text: 'x' })) return;
 			navigator.share({
 				title: userData.name || 'Business Card',
 				text: `${userData.name || ''}${userData.title ? ' - ' + userData.title : ''}`.trim(),
@@ -455,12 +492,9 @@
 			const container = document.getElementById('vip-qr');
 			if (!container) return;
 
-			// Lazy-load QR library (tiny). If you prefer self-hosting, change this URL.
-			this.ensureQRCodeLib(() => {
-				// Clear previous if any
+			// Fix 4: prefer WP-enqueued local copy; fall back to CDN only if unavailable.
+			if (window.QRCode) {
 				container.innerHTML = '';
-				// Encode vCard content directly (best: scan -> save contact)
-				// qrcodejs will generate a canvas/img inside container.
 				// eslint-disable-next-line no-undef
 				new QRCode(container, {
 					text: this.generateVCard(),
@@ -468,7 +502,18 @@
 					height: 220,
 					correctLevel: QRCode.CorrectLevel.M
 				});
-			});
+			} else {
+				this.ensureQRCodeLib(() => {
+					container.innerHTML = '';
+					// eslint-disable-next-line no-undef
+					new QRCode(container, {
+						text: this.generateVCard(),
+						width: 220,
+						height: 220,
+						correctLevel: QRCode.CorrectLevel.M
+					});
+				});
+			}
 		}
 
 		ensureQRCodeLib(cb) {
