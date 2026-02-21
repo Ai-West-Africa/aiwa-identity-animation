@@ -1,0 +1,155 @@
+/* ==========================================
+   SPARXSTAR Photon VCard
+   @version    1.0.0
+   @license
+   @copyright
+   ========================================== */
+
+/* Base Overlay */
+#spax-photon-card-overlay {
+display: none;
+position: fixed;
+inset: 0;
+background-color: rgba(0,0,0,0.96);
+color: #fff;
+z-index: 999999;
+
+flex-direction: column;
+align-items: center;
+justify-content: center;
+
+font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+text-align: center;
+padding: 40px 24px;
+box-sizing: border-box;
+
+opacity: 0;
+transition: opacity 0.25s ease-out;
+touch-action: none;
+}
+
+/* Active State */
+body.spax-photon-card-active #spax-photon-card-overlay {
+display: flex;
+opacity: 1;
+}
+
+body.spax-photon-card-active {
+position: fixed;
+width: 100%;
+overflow: hidden;
+}
+
+/* Logo */
+.spax-photon-logo {
+max-width: 80px;
+margin-bottom: 30px;
+object-fit: contain;
+opacity: 0.9;
+}
+
+/* Name */
+.spax-photon-name {
+font-size: clamp(1.8rem, 4vw, 2.4rem);
+font-weight: 700;
+letter-spacing: -0.5px;
+margin-bottom: 8px;
+color: #fff;
+}
+
+/* Title */
+.spax-photon-title {
+font-size: 0.95rem;
+color: #aaa;
+margin-bottom: 40px;
+text-transform: uppercase;
+letter-spacing: 2px;
+}
+
+/* QR Container */
+.spax-photon-qr {
+margin: 0 auto 35px;
+width: 220px;
+height: 220px;
+display: flex;
+align-items: center;
+justify-content: center;
+background: #fff;
+padding: 14px;
+border-radius: 16px;
+box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+/* Action Buttons Row */
+.spax-photon-actions {
+display: flex;
+gap: 12px;
+flex-wrap: wrap;
+justify-content: center;
+max-width: 360px;
+width: 100%;
+}
+
+/* Buttons */
+.spax-photon-btn {
+flex: 1 1 120px;
+padding: 14px 18px;
+background: transparent;
+color: #fff;
+border: 1px solid #444;
+border-radius: 10px;
+font-size: 0.95rem;
+font-weight: 500;
+cursor: pointer;
+transition: background 0.2s ease, border 0.2s ease;
+}
+
+.spax-photon-btn:hover {
+background: #fff;
+color: #000;
+border-color: #fff;
+}
+
+/* Close Button — Subtle */
+.spax-photon-close {
+margin-top: 40px;
+background: transparent;
+border: none;
+color: #777;
+font-size: 0.9rem;
+cursor: pointer;
+opacity: 0.7;
+}
+
+.spax-photon-close:hover {
+opacity: 1;
+color: #fff;
+}
+
+/* Focus States */
+.spax-photon-close:focus,
+.spax-photon-btn:focus {
+outline: 2px solid #fff;
+outline-offset: 4px;
+}
+
+/* Setup Trigger Button */
+#spax-photon-sensor-grant {
+position: fixed;
+bottom: 25px;
+right: 25px;
+z-index: 9999;
+padding: 14px 24px;
+background: #fff;
+color: #000;
+border: none;
+border-radius: 50px;
+font-weight: 600;
+box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+animation: spaxPhotonSlideUp 0.6s ease-out;
+}
+
+@keyframes spaxPhotonSlideUp {
+from { transform: translateY(50px); opacity: 0; }
+to { transform: translateY(0); opacity: 1; }
+}

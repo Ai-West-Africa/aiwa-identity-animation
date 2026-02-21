@@ -1,0 +1,90 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Minify, Package & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install build dependencies
+        run: npm ci
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Update plugin version in PHP header
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          sed -i "s/^\( \* Version:\s*\).*/\1${VERSION}/" sparxstar-photon-vcard.php
+          sed -i "s/^\( \* @version\s*\).*/\1${VERSION}/" src/SparxstarPhotonVCard.php src/css/sparxstar-photon-vcard.css
+          sed -i "s/define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '[^']*' )/define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '${VERSION}' )/" sparxstar-photon-vcard.php
+
+      - name: Copy unminified assets
+        run: npm run copy:assets
+
+      - name: Minify CSS
+        run: npm run build:css
+
+      - name: Minify JS
+        run: npm run build:js
+
+      - name: Create release archive
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          PLUGIN_SLUG="sparxstar-photon-vcard"
+          ARCHIVE="${PLUGIN_SLUG}-${VERSION}.zip"
+
+          # Build archive from plugin root, excluding dev/build artefacts
+          zip -r "${ARCHIVE}" . \
+            --exclude ".git/*" \
+            --exclude ".github/*" \
+            --exclude "node_modules/*" \
+            --exclude "src/*" \
+            --exclude "package.json" \
+            --exclude "package-lock.json" \
+            --exclude "*.zip"
+
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Generate SHA256 checksum
+        run: |
+          sha256sum "${{ env.ARCHIVE }}" > "${{ env.ARCHIVE }}.sha256"
+          echo "SHA256=$(cat "${{ env.ARCHIVE }}.sha256")" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "SPARXSTAR Photon VCard v${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## SPARXSTAR Photon VCard v${{ steps.version.outputs.VERSION }}
+
+            ### Installation
+            Download `${{ env.ARCHIVE }}` and install via **Plugins → Add New → Upload Plugin** in your WordPress admin.
+
+            ### SHA256 Checksum
+            ```
+            ${{ env.SHA256 }}
+            ```
+          files: |
+            ${{ env.ARCHIVE }}
+            ${{ env.ARCHIVE }}.sha256
+          draft: false
+          prerelease: false

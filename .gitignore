@@ -1,6 +1,10 @@
 # Wordpress - ignore core, configuration, examples, uploads and logs.
 # https://github.com/github/gitignore/blob/main/WordPress.gitignore
 
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+
 # Core
 #
 # Note: if you want to stage/commit WP core files
