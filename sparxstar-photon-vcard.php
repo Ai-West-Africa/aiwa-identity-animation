@@ -199,11 +199,8 @@ function sparxstar_photon_vcard_init() {
 		);
 	}
 
-	// Initialize plugin functionality here.
-	// This is where you would load your plugin's main classes and functionality.
-	// For example:
-	// require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-photon-vcard.php';
-	// Sparxstar_Photon_VCard::get_instance();
+	// Load the main card class.
+	require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'src/SparxstarPhotonVCard.php';
 }
 
 // Register activation hook.
