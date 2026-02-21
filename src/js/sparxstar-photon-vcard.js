@@ -20,7 +20,9 @@ cooldown: 5000,        // lockout after close
 stabilize: 150,        // stabilization window (ms)
 longPress: 800,        // long press duration (ms)
 sensorFps: 10,         // throttle orientation (fps)
-sensorAutoDisable: 30000 // battery saver (ms)
+sensorAutoDisable: 30000, // battery saver (ms)
+gammaThreshold: 20,    // max gamma for face-down detection (degrees)
+permissionTimeout: 2000   // iOS permission promise timeout (ms)
 };
 
 this.state = {
@@ -42,6 +44,7 @@ sensorAutoDisable: null
 
 this.boundOrientationHandler = null;
 this.wakeLock = null;
+this.lastFocus = null;
 
 this.init();
 }
@@ -60,6 +63,9 @@ const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-m
 if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
 this.setupMotion();
 }
+
+// Fix 3: release wake lock on page hide to prevent leak on navigation/refresh
+window.addEventListener('pagehide', () => this.releaseWakeLock());
 
 // Fallback triggers always active
 this.setupFallbacks();
@@ -102,6 +108,8 @@ this.renderSetupButton();
 
 renderSetupButton() {
 // Uses your existing CSS: #spax-photon-sensor-grant
+// Don't show if sensors are already active
+if (this.state.sensorBound) return;
 if (document.getElementById('spax-photon-sensor-grant')) return;
 
 const btn = document.createElement('button');
@@ -123,7 +131,10 @@ try {
 // iOS 13+ permission model
 if (typeof DeviceOrientationEvent !== 'undefined' &&
 typeof DeviceOrientationEvent.requestPermission === 'function') {
+// Fix 10: timeout fallback in case permission promise never resolves
+const timeout = setTimeout(() => this.renderSetupButton(), this.config.permissionTimeout);
 const response = await DeviceOrientationEvent.requestPermission();
+clearTimeout(timeout);
 if (response === 'granted') this.enableSensors();
 } else {
 // Android/others
@@ -143,16 +154,26 @@ window.addEventListener('deviceorientation', this.boundOrientationHandler, { pas
 this.state.sensorBound = true;
 this.storage('spax_photon_motion_enabled', 'true');
 
+// Remove stale activation button (may exist if the permission timeout fired first)
+const grantBtn = document.getElementById('spax-photon-sensor-grant');
+if (grantBtn) grantBtn.remove();
+
 // Battery saver: disable after inactivity window
 this.resetSensorAutoDisable();
 
 this.vibrate(40);
 }
 
-disableSensors() {
+disableSensors(clearStorageFlag = true) {
 if (!this.state.sensorBound) return;
 window.removeEventListener('deviceorientation', this.boundOrientationHandler);
 this.state.sensorBound = false;
+// Only clear the permission flag for user-initiated disables (openCard/closeCard paths).
+// Auto-disable (battery saver) passes false so the flag stays 'true' and the next
+// page load can auto-request on touchstart without showing the activation button.
+if (clearStorageFlag) {
+this.storage('spax_photon_motion_enabled', 'false');
+}
 
 if (this.timers.sensorAutoDisable) {
 clearTimeout(this.timers.sensorAutoDisable);
@@ -163,7 +184,9 @@ this.timers.sensorAutoDisable = null;
 resetSensorAutoDisable() {
 if (this.timers.sensorAutoDisable) clearTimeout(this.timers.sensorAutoDisable);
 this.timers.sensorAutoDisable = setTimeout(() => {
-this.disableSensors();
+// Battery-saver auto-disable: preserve the permission flag so next page load
+// does not show the activation button unnecessarily.
+this.disableSensors(false);
 }, this.config.sensorAutoDisable);
 }
 
@@ -180,8 +203,10 @@ const minDelta = Math.floor(1000 / this.config.sensorFps);
 if (now - this.timers.sensorTick < minDelta) return;
 this.timers.sensorTick = now;
 
-const beta = Math.abs(event.beta || 0);
-const isFlat = beta > this.config.threshold;
+const beta  = Math.abs(event.beta || 0);
+// Fix 2: add gamma stability check to reduce false positives (pocket/walking/table)
+const gamma = Math.abs(event.gamma || 0);
+const isFlat = beta > this.config.threshold && gamma < this.config.gammaThreshold;
 
 // Stabilization
 if (isFlat && !this.state.isFaceDown) {
@@ -268,6 +293,9 @@ openCard(triggerMethod) {
 if (Date.now() - this.state.lastCloseTime < this.config.cooldown) return;
 if (this.state.isActive || document.getElementById('spax-photon-card-overlay')) return;
 
+// Fix 9: save focus for accessibility restoration on close
+this.lastFocus = document.activeElement;
+
 this.state.isActive = true;
 this.disableSensors();
 
@@ -304,7 +332,7 @@ ${userData.logo ? `<img src="${this.safeURL(userData.logo)}" class="spax-photon-
 <div id="spax-photon-qr" class="spax-photon-qr" aria-label="Scan to save contact"></div>
 
 <div class="spax-photon-actions" role="group" aria-label="Business card actions">
-${navigator.share ? `<button type="button" class="spax-photon-btn" id="spax-photon-share-btn">Share</button>` : ''}
+${this._canShare() ? `<button type="button" class="spax-photon-btn" id="spax-photon-share-btn">Share</button>` : ''}
 <button type="button" class="spax-photon-btn" id="spax-photon-save-btn">Save Contact</button>
 </div>
 
@@ -385,6 +413,15 @@ window.scrollTo(0, this.state.scrollPos);
 
 this.state.isActive = false;
 this.state.lastCloseTime = Date.now();
+// Fix 7: reset motion state to prevent immediate re-open
+this.state.isFaceDown = false;
+this.state.taps = 0;
+
+// Fix 8: clear pending timers to avoid memory leaks
+this.timers.stabilizer && clearTimeout(this.timers.stabilizer);
+this.timers.stabilizer = null;
+this.timers.longPress && clearTimeout(this.timers.longPress);
+this.timers.longPress = null;
 
 // Analytics hook
 document.dispatchEvent(new CustomEvent('spax-photon-card-event', {
@@ -393,10 +430,16 @@ detail: { type: 'close', timestamp: Date.now() }
 
 overlay.remove();
 
-// Re-enable sensors if allowed
+// Fix 9: restore focus for accessibility
+if (this.lastFocus) {
+this.lastFocus.focus();
+this.lastFocus = null;
+}
+
+// Fix 1: re-request sensor access (iOS requires user-gesture re-grant after disable)
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
-this.enableSensors();
+this.requestSensorAccess();
 }
 
 this.releaseWakeLock();
@@ -407,7 +450,8 @@ this.releaseWakeLock();
 ---------------------------- */
 
 shareCard() {
-if (!navigator.share) return;
+// Fix 6: guard against browsers that expose share but reject calls
+if (!this._canShare()) return;
 navigator.share({
 title: userData.name || 'Business Card',
 text: `${userData.name || ''}${userData.title ? ' - ' + userData.title : ''}`.trim(),
@@ -545,6 +589,10 @@ vibrate(pattern) {
 if (navigator.vibrate && typeof navigator.vibrate === 'function') {
 try { navigator.vibrate(pattern); } catch (e) {}
 }
+}
+
+_canShare() {
+return !!(navigator.canShare && navigator.canShare({ text: 'x' }));
 }
 
 esc(str) {

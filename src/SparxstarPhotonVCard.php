@@ -3,7 +3,7 @@
 
 declare(strict_types=1);
 
-namespace Starian\Sparxstar\Photon\;
+namespace Starisian\Sparxstar\Photon;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -531,4 +531,4 @@ class SparxstarPhotonVCard {
 	}
 }
 
-Business_Card_Motion::init();
+SparxstarPhotonVCard::init();
