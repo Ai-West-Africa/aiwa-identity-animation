@@ -1,0 +1,57 @@
+# Issue Tracking
+
+This file provides guidance on reporting and tracking issues for the SPARXSTAR Photon VCard project.
+
+## Reporting Issues
+
+If you encounter a bug, have a feature request, or need support, please follow these guidelines:
+
+### Bug Reports
+
+When reporting a bug, please include:
+- A clear and descriptive title
+- Steps to reproduce the issue
+- Expected behavior
+- Actual behavior
+- Environment details (PHP version, WordPress version, browser, etc.)
+- Screenshots or error logs if applicable
+
+### Feature Requests
+
+For feature requests, please provide:
+- A clear description of the proposed feature
+- Use cases and benefits
+- Any relevant examples or mockups
+
+### Security Vulnerabilities
+
+**IMPORTANT**: Do not report security vulnerabilities in public issue trackers.
+
+For security issues:
+- Contact Starisian Technologies directly through secure channels
+- Provide detailed information about the vulnerability
+- Allow time for the issue to be addressed before public disclosure
+
+## Issue Priority Levels
+
+- **Critical**: Security vulnerabilities, data loss, complete feature breakdown
+- **High**: Major functionality issues affecting multiple users
+- **Medium**: Bugs affecting specific features or workflows
+- **Low**: Minor bugs, cosmetic issues, enhancement requests
+
+## Issue Lifecycle
+
+1. **New**: Issue has been reported and is awaiting triage
+2. **Confirmed**: Issue has been verified and accepted
+3. **In Progress**: Work on the issue has begun
+4. **Testing**: Fix is implemented and under testing
+5. **Resolved**: Issue has been fixed and deployed
+6. **Closed**: Issue is resolved and verified
+
+## Contact
+
+For issue reporting and support, please contact Starisian Technologies.
+
+---
+
+Last Updated: December 30, 2025
