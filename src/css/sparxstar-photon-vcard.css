@@ -5,11 +5,6 @@
    @copyright
    ========================================== */
 
-/* Fix 3: prevent iOS rubber-band bounce behind fixed overlay */
-body.spax-photon-card-active {
-overscroll-behavior: none;
-}
-
 /* Base Overlay */
 #spax-photon-card-overlay {
 display: none;
@@ -51,6 +46,8 @@ body.spax-photon-card-active {
 position: fixed;
 width: 100%;
 overflow: hidden;
+/* Prevent iOS rubber-band bounce behind fixed overlay */
+overscroll-behavior: none;
 }
 
 /* Logo */

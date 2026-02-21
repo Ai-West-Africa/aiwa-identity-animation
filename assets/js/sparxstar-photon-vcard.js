@@ -108,6 +108,8 @@ this.renderSetupButton();
 
 renderSetupButton() {
 // Uses your existing CSS: #spax-photon-sensor-grant
+// Don't show if sensors are already active
+if (this.state.sensorBound) return;
 if (document.getElementById('spax-photon-sensor-grant')) return;
 
 const btn = document.createElement('button');
@@ -152,18 +154,26 @@ window.addEventListener('deviceorientation', this.boundOrientationHandler, { pas
 this.state.sensorBound = true;
 this.storage('spax_photon_motion_enabled', 'true');
 
+// Remove stale activation button (may exist if the permission timeout fired first)
+const grantBtn = document.getElementById('spax-photon-sensor-grant');
+if (grantBtn) grantBtn.remove();
+
 // Battery saver: disable after inactivity window
 this.resetSensorAutoDisable();
 
 this.vibrate(40);
 }
 
-disableSensors() {
+disableSensors(clearStorageFlag = true) {
 if (!this.state.sensorBound) return;
 window.removeEventListener('deviceorientation', this.boundOrientationHandler);
 this.state.sensorBound = false;
-// Fix 4: persist disabled state so iOS re-requests permission on next open
+// Only clear the permission flag for user-initiated disables (openCard/closeCard paths).
+// Auto-disable (battery saver) passes false so the flag stays 'true' and the next
+// page load can auto-request on touchstart without showing the activation button.
+if (clearStorageFlag) {
 this.storage('spax_photon_motion_enabled', 'false');
+}
 
 if (this.timers.sensorAutoDisable) {
 clearTimeout(this.timers.sensorAutoDisable);
@@ -174,7 +184,9 @@ this.timers.sensorAutoDisable = null;
 resetSensorAutoDisable() {
 if (this.timers.sensorAutoDisable) clearTimeout(this.timers.sensorAutoDisable);
 this.timers.sensorAutoDisable = setTimeout(() => {
-this.disableSensors();
+// Battery-saver auto-disable: preserve the permission flag so next page load
+// does not show the activation button unnecessarily.
+this.disableSensors(false);
 }, this.config.sensorAutoDisable);
 }
 
