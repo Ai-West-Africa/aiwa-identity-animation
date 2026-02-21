@@ -77,17 +77,24 @@ function sparxstar_photon_vcard_check_requirements() {
 
 	// Display errors if any.
 	if ( ! empty( $errors ) ) {
-		foreach ( $errors as $error ) {
-			add_action(
-				'admin_notices',
-				function () use ( $error ) {
-					?>
-					<div class="notice notice-error">
-						<p><?php echo esc_html( $error ); ?></p>
-					</div>
-					<?php
-				}
-			);
+		// Ensure admin notice hooks are only registered once per request.
+		static $requirements_notices_added = false;
+
+		if ( ! $requirements_notices_added ) {
+			foreach ( $errors as $error ) {
+				add_action(
+					'admin_notices',
+					function () use ( $error ) {
+						?>
+						<div class="notice notice-error">
+							<p><?php echo esc_html( $error ); ?></p>
+						</div>
+						<?php
+					}
+				);
+			}
+
+			$requirements_notices_added = true;
 		}
 		return false;
 	}
