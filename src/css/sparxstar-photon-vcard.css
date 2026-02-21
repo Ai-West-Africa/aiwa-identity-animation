@@ -6,7 +6,7 @@
    ========================================== */
 
 /* Fix 3: prevent iOS rubber-band bounce behind fixed overlay */
-html, body {
+body.spax-photon-card-active {
 overscroll-behavior: none;
 }
 
