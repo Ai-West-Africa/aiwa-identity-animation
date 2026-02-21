@@ -87,19 +87,41 @@ function sparxstar_photon_vcard_delete_directory( $dir ) {
 		return false;
 	}
 
-	$items = array_diff( scandir( $dir ), array( '.', '..' ) );
+	$items   = array_diff( scandir( $dir ), array( '.', '..' ) );
+	$success = true;
 
 	foreach ( $items as $item ) {
 		$path = $dir . DIRECTORY_SEPARATOR . $item;
 
 		if ( is_dir( $path ) ) {
-			sparxstar_photon_vcard_delete_directory( $path );
+			if ( ! sparxstar_photon_vcard_delete_directory( $path ) ) {
+				$success = false;
+			}
 		} else {
-			unlink( $path );
+			if ( ! is_writable( $path ) ) {
+				error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: File not writable, cannot delete: %s', $path ) );
+				$success = false;
+				continue;
+			}
+
+			if ( ! @unlink( $path ) ) {
+				error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: Failed to delete file: %s', $path ) );
+				$success = false;
+			}
 		}
 	}
 
-	return rmdir( $dir );
+	if ( ! is_writable( $dir ) ) {
+		error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: Directory not writable, cannot delete: %s', $dir ) );
+		return false;
+	}
+
+	if ( ! @rmdir( $dir ) ) {
+		error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: Failed to remove directory: %s', $dir ) );
+		return false;
+	}
+
+	return $success;
 }
 
 /**
