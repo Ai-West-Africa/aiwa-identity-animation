@@ -149,6 +149,9 @@ body.vip-card-active {
 	animation: vipSlideUp 0.6s ease-out;
 }
 
+.vc-qr { margin: 0 auto 35px; width: 220px; height: 220px; background:#fff; padding:14px; border-radius: 16px; }
+.vc-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; width:100%; max-width: 360px; }
+
 @keyframes vipSlideUp {
 	from { transform: translateY(50px); opacity: 0; }
 	to { transform: translateY(0); opacity: 1; }
