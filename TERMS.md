@@ -4,7 +4,7 @@
 
 ## 1. Acceptance of Terms
 
-By accessing or using the SPARXSTAR Photo VCard software (the "Software"), you agree to be bound by these Terms of Use. If you do not agree to these terms, do not use the Software.
+By accessing or using the SPARXSTAR Photon VCard software (the "Software"), you agree to be bound by these Terms of Use. If you do not agree to these terms, do not use the Software.
 
 ## 2. License Grant
 
