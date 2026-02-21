@@ -189,7 +189,6 @@ function sparxstar_photon_vcard_init() {
 					<p><?php esc_html_e( 'SPARXSTAR Photon VCard has been activated successfully!', 'sparxstar-photon-vcard' ); ?></p>
 				</div>
 				<?php
-				delete_transient( 'sparxstar_photon_vcard_activation_notice' );
 			}
 		);
 	}
