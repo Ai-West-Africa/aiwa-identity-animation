@@ -97,7 +97,12 @@ function sparxstar_photon_vcard_delete_directory( $dir ) {
 		return false;
 	}
 
-	$items   = array_diff( scandir( $dir ), array( '.', '..' ) );
+	$scanned_items = scandir( $dir );
+	if ( false === $scanned_items ) {
+		return false;
+	}
+
+	$items   = array_diff( $scanned_items, array( '.', '..' ) );
 	$success = true;
 
 	foreach ( $items as $item ) {

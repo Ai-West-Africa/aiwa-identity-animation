@@ -191,6 +191,13 @@ function sparxstar_photon_vcard_init() {
 				<?php
 			}
 		);
+		// Delete the transient after displaying the notice to ensure it's shown at least once.
+		add_action(
+			'admin_footer',
+			function () {
+				delete_transient( 'sparxstar_photon_vcard_activation_notice' );
+			}
+		);
 	}
 
 	// Initialize plugin functionality here.

@@ -1,6 +1,6 @@
 # Contributors
 
-This file acknowledges the individuals and organizations who have contributed to the SPARXSTAR Photo VCard project.
+This file acknowledges the individuals and organizations who have contributed to the SPARXSTAR Photon VCard project.
 
 ## Core Team
 
@@ -35,4 +35,4 @@ For contribution inquiries, please contact Starisian Technologies.
 
 ---
 
-Thank you to everyone who contributes to making SPARXSTAR Photo VCard better!
+Thank you to everyone who contributes to making SPARXSTAR Photon VCard better!
