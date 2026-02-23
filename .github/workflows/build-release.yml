@@ -57,7 +57,8 @@ jobs:
             --exclude ".git/*" \
             --exclude ".github/*" \
             --exclude "node_modules/*" \
-            --exclude "src/*" \
+            --exclude "src/css/*" \
+            --exclude "src/js/*" \
             --exclude "package.json" \
             --exclude "package-lock.json" \
             --exclude "*.zip"
