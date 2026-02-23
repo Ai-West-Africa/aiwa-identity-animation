@@ -514,29 +514,13 @@ correctLevel: QRCode.CorrectLevel.M
 }
 
 ensureQRCodeLib(cb) {
+// QR library is enqueued as a WordPress dependency (assets/js/qrcode.min.js)
+// and guaranteed to be loaded before this script.
 if (window.QRCode) {
 cb();
-return;
+} else if (typeof console !== 'undefined') {
+console.warn('SpaxPhotonVCard: QRCode library not found. Ensure qrcode.min.js is enqueued.');
 }
-// Avoid duplicate loads
-if (document.getElementById('spax-photon-qrcode-lib')) {
-// If script is loading, poll lightly
-const t = setInterval(() => {
-if (window.QRCode) {
-clearInterval(t);
-cb();
-}
-}, 50);
-setTimeout(() => clearInterval(t), 3000);
-return;
-}
-
-const s = document.createElement('script');
-s.id    = 'spax-photon-qrcode-lib';
-s.src   = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-s.async = true;
-s.onload = () => cb();
-document.head.appendChild(s);
 }
 
 /* ---------------------------
