@@ -70,15 +70,25 @@ class SparxstarPhotonVCard {
 		$css_file = $debug ? 'sparxstar-photon-vcard.css' : 'sparxstar-photon-vcard.min.css';
 		$js_file  = $debug ? 'sparxstar-photon-vcard.js'  : 'sparxstar-photon-vcard.min.js';
 
-		// 5. ENQUEUE QR LIBRARY (local asset, no CDN dependency)
-		$qr_path = SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'assets/js/qrcode.min.js';
+		// 5. REGISTER & ENQUEUE QR LIBRARY (local asset, no CDN dependency).
+		//    Build the dependency list dynamically so the main script is never
+		//    silently dropped by WordPress when the QR file is missing.
+		$script_deps = [];
+		$qr_path     = SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'assets/js/qrcode.min.js';
 		if ( file_exists( $qr_path ) ) {
-			wp_enqueue_script(
+			wp_register_script(
 				'spax-photon-qrcode',
 				SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/qrcode.min.js',
 				[],
 				SPARXSTAR_PHOTON_VCARD_VERSION,
 				true
+			);
+			wp_enqueue_script( 'spax-photon-qrcode' );
+			$script_deps[] = 'spax-photon-qrcode';
+		} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			trigger_error(
+				'SPARXSTAR Photon VCard: qrcode.min.js not found in assets/js/. The QR code feature will be unavailable.',
+				E_USER_WARNING
 			);
 		}
 
@@ -90,11 +100,11 @@ class SparxstarPhotonVCard {
 			SPARXSTAR_PHOTON_VCARD_VERSION
 		);
 
-		// 7. ENQUEUE MAIN SCRIPT (QR library must load first)
+		// 7. ENQUEUE MAIN SCRIPT
 		wp_enqueue_script(
 			'spax-photon-vcard',
 			SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/' . $js_file,
-			[ 'spax-photon-qrcode' ],
+			$script_deps,
 			SPARXSTAR_PHOTON_VCARD_VERSION,
 			true
 		);
@@ -120,7 +130,7 @@ class SparxstarPhotonVCard {
 			'SPAX_PHOTON_VCARD_DATA',
 			[
 				'name'     => get_user_meta( $user_id, 'scf_full_name', true ) ?: $user->display_name,
-				'title'    => get_user_meta( $user_id, 'scf_job_title', true ) ?: 'Business Associate',
+				'title'    => get_user_meta( $user_id, 'scf_job_title', true ) ?: __( 'Business Associate', 'sparxstar-photon-vcard' ),
 				'phone'    => get_user_meta( $user_id, 'scf_phone_number', true ) ?: '',
 				'email'    => $user->user_email,
 				'logo'     => get_user_meta( $user_id, 'scf_business_logo_url', true ) ?: '',

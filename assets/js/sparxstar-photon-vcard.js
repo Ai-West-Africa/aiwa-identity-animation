@@ -498,7 +498,7 @@ renderVCardQR() {
 const container = document.getElementById('spax-photon-qr');
 if (!container) return;
 
-// Lazy-load QR library (tiny). If you prefer self-hosting, change this URL.
+// QR library is a WordPress-enqueued dependency (assets/js/qrcode.min.js).
 this.ensureQRCodeLib(() => {
 // Clear previous if any
 container.innerHTML = '';
