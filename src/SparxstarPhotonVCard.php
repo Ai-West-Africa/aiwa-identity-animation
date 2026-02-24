@@ -100,8 +100,20 @@ class SparxstarPhotonVCard {
 		);
 
 		// 8. ENTERPRISE CONFIGURATION (Filter Hook)
-		$disable_sensors = apply_filters( 'vip_motion_disable_sensors', false, $user_id, $post_obj->ID );
+		$disable_sensors = apply_filters(
+			'sparxstar_photon_vcard_disable_sensors',
+			false,
+			$user_id,
+			$post_obj->ID
+		);
 
+		// Backwards compatibility: legacy filter name (deprecated alias).
+		$disable_sensors = apply_filters(
+			'vip_motion_disable_sensors',
+			$disable_sensors,
+			$user_id,
+			$post_obj->ID
+		);
 		// 9. PASS CARD DATA (replaces inline JSON — no XSS risk)
 		wp_localize_script(
 			'spax-photon-vcard',
