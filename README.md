@@ -12,6 +12,10 @@ SPARXSTAR Photon VCard
 
 Copyright (c) 2025 Starisian Technologies. All rights reserved.
 
+[![CodeQL](https://github.com/Starisian-Technologies/sparxstar-photon-vcard/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Starisian-Technologies/sparxstar-photon-vcard/actions/workflows/github-code-scanning/codeql)  [![Copilot code review](https://github.com/Starisian-Technologies/sparxstar-photon-vcard/actions/workflows/copilot-pull-request-reviewer/copilot-pull-request-reviewer/badge.svg)](https://github.com/Starisian-Technologies/sparxstar-photon-vcard/actions/workflows/copilot-pull-request-reviewer/copilot-pull-request-reviewer)  [![Copilot coding agent](https://github.com/Starisian-Technologies/sparxstar-photon-vcard/actions/workflows/copilot-swe-agent/copilot/badge.svg)](https://github.com/Starisian-Technologies/sparxstar-photon-vcard/actions/workflows/copilot-swe-agent/copilot)
+
+[![Build & Release](https://github.com/Starisian-Technologies/sparxstar-photon-vcard/actions/workflows/build-release.yml/badge.svg)](https://github.com/Starisian-Technologies/sparxstar-photon-vcard/actions/workflows/build-release.yml)
+
 * * * * *
 
 Overview
