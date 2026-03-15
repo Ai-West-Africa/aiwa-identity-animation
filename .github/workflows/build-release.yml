@@ -70,9 +70,10 @@ jobs:
             . "${STAGING}/"
 
           # Build archive with the slug as the single top-level directory.
+          ROOT="$PWD"
           cd /tmp
-          zip -r "${OLDPWD}/${ARCHIVE}" "${PLUGIN_SLUG}"
-          cd -
+          zip -r "${ROOT}/${ARCHIVE}" "${PLUGIN_SLUG}"
+          cd "$ROOT"
 
           echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
 
