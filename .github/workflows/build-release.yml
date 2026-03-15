@@ -56,6 +56,7 @@ jobs:
           # WordPress always installs to the canonical 'sparxstar-photon-vcard/'
           # directory instead of a versioned path like 'sparxstar-photon-vcard-X.Y.Z/'.
           STAGING="/tmp/${PLUGIN_SLUG}"
+          rm -rf "${STAGING}"
           mkdir -p "${STAGING}"
 
           rsync -a \
