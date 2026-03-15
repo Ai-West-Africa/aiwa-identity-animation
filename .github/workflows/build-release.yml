@@ -52,16 +52,29 @@ jobs:
           PLUGIN_SLUG="sparxstar-photon-vcard"
           ARCHIVE="${PLUGIN_SLUG}-${VERSION}.zip"
 
-          # Build archive from plugin root, excluding dev/build artefacts
-          zip -r "${ARCHIVE}" . \
-            --exclude ".git/*" \
-            --exclude ".github/*" \
-            --exclude "node_modules/*" \
-            --exclude "src/css/*" \
-            --exclude "src/js/*" \
-            --exclude "package.json" \
-            --exclude "package-lock.json" \
-            --exclude "*.zip"
+          # Stage plugin files inside a slug-named subdirectory so that
+          # WordPress always installs to the canonical 'sparxstar-photon-vcard/'
+          # directory instead of a versioned path like 'sparxstar-photon-vcard-X.Y.Z/'.
+          STAGING="/tmp/${PLUGIN_SLUG}"
+          rm -rf "${STAGING}"
+          mkdir -p "${STAGING}"
+
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='src/css/' \
+            --exclude='src/js/' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='*.zip' \
+            . "${STAGING}/"
+
+          # Build archive with the slug as the single top-level directory.
+          ROOT="$PWD"
+          cd /tmp
+          zip -r "${ROOT}/${ARCHIVE}" "${PLUGIN_SLUG}"
+          cd "$ROOT"
 
           echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
 
