@@ -9,6 +9,9 @@
     "build": "npm run build:css && npm run build:js",
     "copy:assets": "cp src/css/sparxstar-photon-vcard.css assets/css/sparxstar-photon-vcard.css && cp src/js/sparxstar-photon-vcard.js assets/js/sparxstar-photon-vcard.js"
   },
+  "dependencies": {
+    "qrcode": "latest"
+  },
   "devDependencies": {
     "clean-css-cli": "^5.6.3",
     "uglify-js": "^3.19.3"

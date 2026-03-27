@@ -5,16 +5,18 @@ declare(strict_types=1);
 
 namespace Starisian\Sparxstar\Photon;
 
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
 
 class SparxstarPhotonVCard {
 
 	/**
 	 * Singleton instance.
 	 */
-	private static ?self $instance = null;
+	private static ?SparxstarPhotonVCard $instance = null;
 
 	/**
 	 * Private constructor — registers hooks.
@@ -26,7 +28,7 @@ class SparxstarPhotonVCard {
 	/**
 	 * Return (or create) the singleton instance.
 	 */
-	public static function get_instance(): self {
+	public static function get_instance(): SparxstarPhotonVCard {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
