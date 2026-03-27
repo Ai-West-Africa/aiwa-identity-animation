@@ -1,27 +1,40 @@
-(function () {
+/**
+ * SPARXSTAR Photon VCard — front-end runtime.
+ *
+ * Bootstrapped by WordPress via wp_enqueue_script.  Card data is injected
+ * by wp_localize_script as window.SPX_PHOTON_VCARD.
+ *
+ * The module pattern passes window and document explicitly so that:
+ *  – local references are resolvable at parse time (minifier-friendly),
+ *  – the singleton instance is reachable at window.spxPhotonVCard for
+ *    external scripts and browser-console debugging.
+ *
+ * @package Starisian\Sparxstar\Photon
+ */
+(function (window, document) {
 'use strict';
 
-// 1) SINGLETON LOCK (Prevent multi-injection issues)
-if (window.__SPAX_PHOTON_CARD_LOADED__) return;
-window.__SPAX_PHOTON_CARD_LOADED__ = true;
+// 1) SINGLETON LOCK (prevent multi-injection on back/forward cache hits)
+if (window.__SPX_PHOTON_CARD_LOADED__) return;
+window.__SPX_PHOTON_CARD_LOADED__ = true;
 
-// 2) WordPress-provided data (via wp_localize_script)
-// Expected global: window.SPAX_PHOTON_VCARD_DATA = { name, title, phone, email, logo, noSensor? }
-const userData = (window.SPAX_PHOTON_VCARD_DATA && typeof window.SPAX_PHOTON_VCARD_DATA === 'object')
-? window.SPAX_PHOTON_VCARD_DATA
+// 2) WordPress-provided data (via wp_localize_script → SPX_PHOTON_VCARD)
+// Expected shape: { name, title, phone, email, logo, noSensor? }
+const userData = (window.SPX_PHOTON_VCARD && typeof window.SPX_PHOTON_VCARD === 'object')
+? window.SPX_PHOTON_VCARD
 : {};
 
-class SpaxPhotonVCard {
+class SpxPhotonVCard {
 constructor() {
 this.config = {
-threshold: 155,        // beta threshold for "flat/face-down" trigger
-resetTime: 2500,       // tap sequence reset
-cooldown: 5000,        // lockout after close
-stabilize: 150,        // stabilization window (ms)
-longPress: 800,        // long press duration (ms)
-sensorFps: 10,         // throttle orientation (fps)
-sensorAutoDisable: 30000, // battery saver (ms)
-gammaThreshold: 20,    // max gamma for face-down detection (degrees)
+threshold: 155,           // beta threshold for "flat/face-down" trigger
+resetTime: 2500,          // tap sequence reset window (ms)
+cooldown: 5000,           // lockout after close (ms)
+stabilize: 150,           // stabilization window (ms)
+longPress: 800,           // long-press duration (ms)
+sensorFps: 10,            // throttle orientation events (fps)
+sensorAutoDisable: 30000, // battery saver — disable after inactivity (ms)
+gammaThreshold: 20,       // max gamma for face-down detection (degrees)
 permissionTimeout: 2000   // iOS permission promise timeout (ms)
 };
 
@@ -56,30 +69,29 @@ this.init();
 init() {
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Motion Setup:
-// - only if not reduced motion
-// - only if not disabled by WP data (noSensor)
-// - only if not low-end device
+// Enable motion triggers only when:
+// – user has not opted in to reduced motion,
+// – the WP data layer has not disabled sensors, and
+// – the device is not flagged as low-end.
 if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
 this.setupMotion();
 }
 
-// Fix 3: release wake lock on page hide to prevent leak on navigation/refresh
+// Release wake lock on page hide to prevent leaks on navigation/refresh.
 window.addEventListener('pagehide', () => this.releaseWakeLock());
 
-// Fallback triggers always active
+// Fallback triggers are always active.
 this.setupFallbacks();
 }
 
 isLowEndDevice() {
-// Conservative: disable motion on low-end hardware for better UX
 const hc = navigator.hardwareConcurrency;
 const dm = navigator.deviceMemory;
 return (typeof hc === 'number' && hc <= 4) || (typeof dm === 'number' && dm <= 2);
 }
 
 /* ---------------------------
-   SAFE STORAGE (kiosk/private mode)
+   SAFE STORAGE (kiosk / private mode)
 ---------------------------- */
 
 storage(key, val = null) {
@@ -96,8 +108,7 @@ return null;
 ---------------------------- */
 
 setupMotion() {
-// If previously enabled, request on first user gesture (needed on iOS anyway)
-const isEnabled = this.storage('spax_photon_motion_enabled') === 'true';
+const isEnabled = this.storage('spx_photon_motion_enabled') === 'true';
 
 if (isEnabled) {
 document.addEventListener('touchstart', () => this.requestSensorAccess(), { once: true, passive: true });
@@ -107,8 +118,6 @@ this.renderSetupButton();
 }
 
 renderSetupButton() {
-// Uses your existing CSS: #spax-photon-sensor-grant
-// Don't show if sensors are already active
 if (this.state.sensorBound) return;
 if (document.getElementById('spax-photon-sensor-grant')) return;
 
@@ -128,20 +137,20 @@ async requestSensorAccess() {
 if (this.state.sensorBound) return;
 
 try {
-// iOS 13+ permission model
 if (typeof DeviceOrientationEvent !== 'undefined' &&
 typeof DeviceOrientationEvent.requestPermission === 'function') {
-// Fix 10: timeout fallback in case permission promise never resolves
+// iOS 13+ permission model — apply a timeout in case the promise
+// never resolves (e.g. the dialog is dismissed without a choice).
 const timeout = setTimeout(() => this.renderSetupButton(), this.config.permissionTimeout);
 const response = await DeviceOrientationEvent.requestPermission();
 clearTimeout(timeout);
 if (response === 'granted') this.enableSensors();
 } else {
-// Android/others
+// Android and all other browsers grant access implicitly.
 this.enableSensors();
 }
 } catch (e) {
-// Fallbacks remain active
+// Fallbacks remain active on permission errors.
 }
 }
 
@@ -152,13 +161,13 @@ this.boundOrientationHandler = this.handleOrientation.bind(this);
 window.addEventListener('deviceorientation', this.boundOrientationHandler, { passive: true });
 
 this.state.sensorBound = true;
-this.storage('spax_photon_motion_enabled', 'true');
+this.storage('spx_photon_motion_enabled', 'true');
 
-// Remove stale activation button (may exist if the permission timeout fired first)
+// Remove stale activation button (may exist if the permission timeout fired first).
 const grantBtn = document.getElementById('spax-photon-sensor-grant');
 if (grantBtn) grantBtn.remove();
 
-// Battery saver: disable after inactivity window
+// Battery saver: auto-disable after the inactivity window.
 this.resetSensorAutoDisable();
 
 this.vibrate(40);
@@ -168,11 +177,12 @@ disableSensors(clearStorageFlag = true) {
 if (!this.state.sensorBound) return;
 window.removeEventListener('deviceorientation', this.boundOrientationHandler);
 this.state.sensorBound = false;
-// Only clear the permission flag for user-initiated disables (openCard/closeCard paths).
+
+// Only clear the permission flag for user-initiated disables (openCard/closeCard).
 // Auto-disable (battery saver) passes false so the flag stays 'true' and the next
 // page load can auto-request on touchstart without showing the activation button.
 if (clearStorageFlag) {
-this.storage('spax_photon_motion_enabled', 'false');
+this.storage('spx_photon_motion_enabled', 'false');
 }
 
 if (this.timers.sensorAutoDisable) {
@@ -184,8 +194,6 @@ this.timers.sensorAutoDisable = null;
 resetSensorAutoDisable() {
 if (this.timers.sensorAutoDisable) clearTimeout(this.timers.sensorAutoDisable);
 this.timers.sensorAutoDisable = setTimeout(() => {
-// Battery-saver auto-disable: preserve the permission flag so next page load
-// does not show the activation button unnecessarily.
 this.disableSensors(false);
 }, this.config.sensorAutoDisable);
 }
@@ -194,21 +202,19 @@ handleOrientation(event) {
 if (this.state.isActive) return;
 if (!this.state.sensorBound) return;
 
-// Reset battery saver when there's sensor activity
 this.resetSensorAutoDisable();
 
-// THROTTLE to reduce CPU on older devices
+// Throttle to reduce CPU load on older devices.
 const now = Date.now();
 const minDelta = Math.floor(1000 / this.config.sensorFps);
 if (now - this.timers.sensorTick < minDelta) return;
 this.timers.sensorTick = now;
 
-const beta  = Math.abs(event.beta || 0);
-// Fix 2: add gamma stability check to reduce false positives (pocket/walking/table)
+const beta  = Math.abs(event.beta  || 0);
 const gamma = Math.abs(event.gamma || 0);
+// Require low gamma to reduce false positives (pocket/walking/table).
 const isFlat = beta > this.config.threshold && gamma < this.config.gammaThreshold;
 
-// Stabilization
 if (isFlat && !this.state.isFaceDown) {
 if (!this.timers.stabilizer) {
 this.timers.stabilizer = setTimeout(() => {
@@ -257,7 +263,7 @@ this.openCard('keyboard');
 }
 });
 
-// Touch: long press with scroll guard
+// Touch: long press with scroll guard.
 let startY = 0;
 
 const startPress = () => {
@@ -265,7 +271,6 @@ if (this.state.isActive) return;
 startY = window.scrollY;
 
 this.timers.longPress = setTimeout(() => {
-// SCROLL GUARD
 if (Math.abs(window.scrollY - startY) < 10) {
 this.openCard('touch');
 }
@@ -280,8 +285,8 @@ this.timers.longPress = null;
 };
 
 document.addEventListener('touchstart', startPress, { passive: true });
-document.addEventListener('touchend', cancelPress);
-document.addEventListener('touchmove', cancelPress, { passive: true });
+document.addEventListener('touchend',   cancelPress);
+document.addEventListener('touchmove',  cancelPress, { passive: true });
 }
 
 /* ---------------------------
@@ -289,23 +294,22 @@ document.addEventListener('touchmove', cancelPress, { passive: true });
 ---------------------------- */
 
 openCard(triggerMethod) {
-// Cooldown & duplicate check
 if (Date.now() - this.state.lastCloseTime < this.config.cooldown) return;
 if (this.state.isActive || document.getElementById('spax-photon-card-overlay')) return;
 
-// Fix 9: save focus for accessibility restoration on close
+// Save current focus for accessibility restoration on close.
 this.lastFocus = document.activeElement;
 
 this.state.isActive = true;
 this.disableSensors();
 
-// iOS safe scroll lock (CSS expects body.spax-photon-card-active fixed)
+// iOS safe scroll lock (CSS expects body.spax-photon-card-active + fixed).
 this.state.scrollPos = window.scrollY;
 document.body.style.top = `-${this.state.scrollPos}px`;
 document.body.classList.add('spax-photon-card-active');
 
-// Analytics hook
-document.dispatchEvent(new CustomEvent('spax-photon-card-event', {
+// Analytics hook — external listeners can subscribe via document.
+document.dispatchEvent(new CustomEvent('spx-photon-card-event', {
 detail: { type: 'open', method: triggerMethod, timestamp: Date.now() }
 }));
 
@@ -319,7 +323,6 @@ injectOverlay() {
 const overlay = document.createElement('div');
 overlay.id = 'spax-photon-card-overlay';
 
-// Accessibility attributes
 overlay.setAttribute('role', 'dialog');
 overlay.setAttribute('aria-modal', 'true');
 overlay.setAttribute('aria-label', 'Digital Business Card');
@@ -341,20 +344,16 @@ ${this._canShare() ? `<button type="button" class="spax-photon-btn" id="spax-pho
 
 document.body.appendChild(overlay);
 
-// Focus management
 const focusable = overlay.querySelectorAll('button, a, [tabindex]:not([tabindex="-1"])');
-const closeBtn = document.getElementById('spax-photon-close-btn');
+const closeBtn  = document.getElementById('spax-photon-close-btn');
 
-// Render QR (vCard encoded)
 this.renderVCardQR();
-
-// Attach actions
 this.attachOverlayActions();
 
-// Initial focus
+// Set initial focus to close button.
 setTimeout(() => closeBtn && closeBtn.focus(), 50);
 
-// Key handling: Escape + focus trap
+// Key handling: Escape + focus trap.
 overlay.addEventListener('keydown', (e) => {
 if (e.key === 'Escape') {
 this.closeCard();
@@ -362,7 +361,7 @@ return;
 }
 if (e.key === 'Tab' && focusable.length) {
 const first = focusable[0];
-const last = focusable[focusable.length - 1];
+const last  = focusable[focusable.length - 1];
 
 if (e.shiftKey) {
 if (document.activeElement === first) {
@@ -385,17 +384,11 @@ const saveBtn  = document.getElementById('spax-photon-save-btn');
 const closeBtn = document.getElementById('spax-photon-close-btn');
 const overlay  = document.getElementById('spax-photon-card-overlay');
 
-if (shareBtn) {
-shareBtn.addEventListener('click', () => this.shareCard(), { passive: true });
-}
-if (saveBtn) {
-saveBtn.addEventListener('click', () => this.downloadVCard(), { passive: true });
-}
-if (closeBtn) {
-closeBtn.addEventListener('click', () => this.closeCard(), { passive: true });
-}
+if (shareBtn) shareBtn.addEventListener('click', () => this.shareCard(),     { passive: true });
+if (saveBtn)  saveBtn.addEventListener( 'click', () => this.downloadVCard(), { passive: true });
+if (closeBtn) closeBtn.addEventListener('click', () => this.closeCard(),     { passive: true });
 
-// Close when tapping backdrop (but not when tapping inside content)
+// Close when tapping the backdrop (not when tapping inside content).
 overlay.addEventListener('click', (e) => {
 if (e.target === overlay) this.closeCard();
 });
@@ -407,36 +400,33 @@ if (!overlay) return;
 
 document.body.classList.remove('spax-photon-card-active');
 
-// Restore scroll
+// Restore scroll position.
 document.body.style.top = '';
 window.scrollTo(0, this.state.scrollPos);
 
-this.state.isActive = false;
+this.state.isActive      = false;
 this.state.lastCloseTime = Date.now();
-// Fix 7: reset motion state to prevent immediate re-open
+// Reset motion state to prevent immediate re-open.
 this.state.isFaceDown = false;
-this.state.taps = 0;
+this.state.taps       = 0;
 
-// Fix 8: clear pending timers to avoid memory leaks
-this.timers.stabilizer && clearTimeout(this.timers.stabilizer);
-this.timers.stabilizer = null;
-this.timers.longPress && clearTimeout(this.timers.longPress);
-this.timers.longPress = null;
+// Clear pending timers to avoid memory leaks.
+if (this.timers.stabilizer) { clearTimeout(this.timers.stabilizer); this.timers.stabilizer = null; }
+if (this.timers.longPress)  { clearTimeout(this.timers.longPress);  this.timers.longPress  = null; }
 
-// Analytics hook
-document.dispatchEvent(new CustomEvent('spax-photon-card-event', {
+document.dispatchEvent(new CustomEvent('spx-photon-card-event', {
 detail: { type: 'close', timestamp: Date.now() }
 }));
 
 overlay.remove();
 
-// Fix 9: restore focus for accessibility
+// Restore focus for accessibility.
 if (this.lastFocus) {
 this.lastFocus.focus();
 this.lastFocus = null;
 }
 
-// Fix 1: re-request sensor access (iOS requires user-gesture re-grant after disable)
+// Re-request sensor access (iOS requires a user-gesture re-grant after disable).
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
 this.requestSensorAccess();
@@ -450,17 +440,15 @@ this.releaseWakeLock();
 ---------------------------- */
 
 shareCard() {
-// Fix 6: guard against browsers that expose share but reject calls
 if (!this._canShare()) return;
 navigator.share({
 title: userData.name || 'Business Card',
-text: `${userData.name || ''}${userData.title ? ' - ' + userData.title : ''}`.trim(),
-url: window.location.href
+text:  `${userData.name || ''}${userData.title ? ' - ' + userData.title : ''}`.trim(),
+url:   window.location.href
 }).catch(() => {});
 }
 
 generateVCard() {
-// Keep it compatible across scanners/importers
 const name  = (userData.name  || '').replace(/\n/g, ' ').trim();
 const title = (userData.title || '').replace(/\n/g, ' ').trim();
 const tel   = (userData.phone || '').replace(/\s+/g, ' ').trim();
@@ -484,9 +472,9 @@ const vcard = this.generateVCard();
 const blob  = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
 const url   = URL.createObjectURL(blob);
 
-const a = document.createElement('a');
-a.href     = url;
-a.download = `${(userData.name || 'contact').replace(/[^\w\-]+/g, '_')}.vcf`;
+const a      = document.createElement('a');
+a.href       = url;
+a.download   = `${(userData.name || 'contact').replace(/[^\w\-]+/g, '_')}.vcf`;
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
@@ -498,11 +486,8 @@ renderVCardQR() {
 const container = document.getElementById('spax-photon-qr');
 if (!container) return;
 
-// QR library is a WordPress-enqueued dependency (assets/js/qrcode.min.js).
 this.ensureQRCodeLib(() => {
-// Clear previous if any
 container.innerHTML = '';
-// Encode vCard content directly (best: scan -> save contact)
 // eslint-disable-next-line no-undef
 new QRCode(container, {
 text: this.generateVCard(),
@@ -514,12 +499,10 @@ correctLevel: QRCode.CorrectLevel.M
 }
 
 ensureQRCodeLib(cb) {
-// QR library is enqueued as a WordPress dependency (assets/js/qrcode.min.js)
-// and guaranteed to be loaded before this script.
 if (window.QRCode) {
 cb();
 } else if (typeof console !== 'undefined') {
-console.warn('SpaxPhotonVCard: QRCode library not found. Ensure qrcode.min.js is enqueued.');
+console.warn('SpxPhotonVCard: QRCode library not found. Ensure qrcode.min.js is enqueued.');
 }
 }
 
@@ -528,14 +511,12 @@ console.warn('SpaxPhotonVCard: QRCode library not found. Ensure qrcode.min.js is
 ---------------------------- */
 
 async keepScreenAwake() {
-// Great for trade shows (prevents dim/sleep)
 if (!('wakeLock' in navigator)) return;
 
 try {
 // eslint-disable-next-line no-undef
 this.wakeLock = await navigator.wakeLock.request('screen');
 
-// If page visibility changes, re-request when visible again
 this._onVisChange = async () => {
 if (!this.state.isActive) return;
 if (document.visibilityState === 'visible' && !this.wakeLock) {
@@ -548,7 +529,7 @@ this.wakeLock = await navigator.wakeLock.request('screen');
 
 document.addEventListener('visibilitychange', this._onVisChange);
 } catch (e) {
-// ignore
+// Ignore — wake lock is a best-effort optimisation.
 }
 }
 
@@ -590,17 +571,22 @@ safeURL(url) {
 if (!url) return '';
 try {
 const u = new URL(url, window.location.href);
-// allow only safe protocols
 if (['http:', 'https:'].includes(u.protocol)) return u.href;
 } catch (e) {}
 return '';
 }
 }
 
-// Boot safely
-if (document.readyState === 'loading') {
-document.addEventListener('DOMContentLoaded', () => new SpaxPhotonVCard());
-} else {
-new SpaxPhotonVCard();
+// Boot safely: defer until DOM is ready when the script is in <head>,
+// or execute immediately when the DOM is already interactive/complete.
+function spx_photon_boot() {
+window.spxPhotonVCard = new SpxPhotonVCard();
 }
-})();
+
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', spx_photon_boot);
+} else {
+spx_photon_boot();
+}
+
+})(window, document);

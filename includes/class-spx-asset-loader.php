@@ -1,25 +1,37 @@
 <?php
 
-
 declare(strict_types=1);
 
 namespace Starisian\Sparxstar\Photon;
-
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-
-class SparxstarPhotonVCard {
+/**
+ * Asset loader / front-end orchestrator.
+ *
+ * Enqueues the plugin stylesheet, main script, and QR library, and passes
+ * per-user card data to JavaScript via wp_localize_script.
+ *
+ * Instantiated as a singleton by {@see Bootloader::init()} — do not call
+ * get_instance() directly in production code.
+ *
+ * @package Starisian\Sparxstar\Photon
+ * @since   1.0.0
+ * @version 1.0.0
+ */
+final class AssetLoader {
 
 	/**
 	 * Singleton instance.
+	 *
+	 * @var AssetLoader|null
 	 */
-	private static ?SparxstarPhotonVCard $instance = null;
+	private static ?AssetLoader $instance = null;
 
 	/**
-	 * Private constructor — registers hooks.
+	 * Private constructor — registers the wp_enqueue_scripts hook.
 	 */
 	private function __construct() {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
@@ -27,8 +39,10 @@ class SparxstarPhotonVCard {
 
 	/**
 	 * Return (or create) the singleton instance.
+	 *
+	 * @return AssetLoader
 	 */
-	public static function get_instance(): SparxstarPhotonVCard {
+	public static function get_instance(): AssetLoader {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
@@ -40,6 +54,8 @@ class SparxstarPhotonVCard {
 	 *
 	 * All auth / permission checks are performed here so nothing is enqueued
 	 * for visitors who are not entitled to the card.
+	 *
+	 * @return void
 	 */
 	public function enqueue_assets(): void {
 		// 1. FAIL FAST
@@ -79,14 +95,14 @@ class SparxstarPhotonVCard {
 		$qr_path     = SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'assets/js/qrcode.min.js';
 		if ( file_exists( $qr_path ) ) {
 			wp_register_script(
-				'spax-photon-qrcode',
+				'spx-photon-qrcode',
 				SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/qrcode.min.js',
 				[],
 				SPARXSTAR_PHOTON_VCARD_VERSION,
 				true
 			);
-			wp_enqueue_script( 'spax-photon-qrcode' );
-			$script_deps[] = 'spax-photon-qrcode';
+			wp_enqueue_script( 'spx-photon-qrcode' );
+			$script_deps[] = 'spx-photon-qrcode';
 		} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			trigger_error(
 				'SPARXSTAR Photon VCard: qrcode.min.js not found in assets/js/. The QR code feature will be unavailable.',
@@ -96,7 +112,7 @@ class SparxstarPhotonVCard {
 
 		// 6. ENQUEUE STYLESHEET
 		wp_enqueue_style(
-			'spax-photon-vcard',
+			'spx-photon-vcard',
 			SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/css/' . $css_file,
 			[],
 			SPARXSTAR_PHOTON_VCARD_VERSION
@@ -104,7 +120,7 @@ class SparxstarPhotonVCard {
 
 		// 7. ENQUEUE MAIN SCRIPT
 		wp_enqueue_script(
-			'spax-photon-vcard',
+			'spx-photon-vcard',
 			SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/' . $js_file,
 			$script_deps,
 			SPARXSTAR_PHOTON_VCARD_VERSION,
@@ -126,10 +142,12 @@ class SparxstarPhotonVCard {
 			$user_id,
 			$post_obj->ID
 		);
-		// 9. PASS CARD DATA (replaces inline JSON — no XSS risk)
+
+		// 9. PASS CARD DATA (replaces inline JSON — no XSS risk).
+		//    The JS global is SPX_PHOTON_VCARD (spx_ prefix per WP VIP standards).
 		wp_localize_script(
-			'spax-photon-vcard',
-			'SPAX_PHOTON_VCARD_DATA',
+			'spx-photon-vcard',
+			'SPX_PHOTON_VCARD',
 			[
 				'name'     => get_user_meta( $user_id, 'scf_full_name', true ) ?: $user->display_name,
 				'title'    => get_user_meta( $user_id, 'scf_job_title', true ) ?: __( 'Business Associate', 'sparxstar-photon-vcard' ),
@@ -141,5 +159,3 @@ class SparxstarPhotonVCard {
 		);
 	}
 }
-
-SparxstarPhotonVCard::get_instance();
