@@ -200,7 +200,7 @@ function sparxstar_photon_vcard_init() {
 	}
 
 	// Load the main card class.
-	require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'src/SparxstarPhotonVCard.php';
+	require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'SparxstarPhotonVCard.php';
 }
 
 // Register activation hook.
