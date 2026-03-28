@@ -34,7 +34,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
           sed -i "s/^\( \* Version:\s*\).*/\1${VERSION}/" sparxstar-photon-vcard.php
-          sed -i "s/^\( \* @version\s*\).*/\1${VERSION}/" SparxstarPhotonVCard.php src/css/sparxstar-photon-vcard.css
+          sed -i "s/^\( \* @version\s*\).*/\1${VERSION}/" sparxstar-photon-vcard.php includes/class-spx-asset-loader.php src/css/sparxstar-photon-vcard.css
           sed -i "s/define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '[^']*' )/define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '${VERSION}' )/" sparxstar-photon-vcard.php
 
       - name: Copy unminified assets
