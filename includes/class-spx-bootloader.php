@@ -50,12 +50,15 @@ final class Bootloader {
 	/**
 	 * Activation hook callback.
 	 *
-	 * Verifies requirements, writes default options, and sets an activation
-	 * transient for the welcome notice.
+	 * Verifies requirements, then writes default options and sets an activation
+	 * transient for the welcome notice.  On multisite network activation the
+	 * per-site work is repeated for every site in the network.
+	 *
+	 * @param bool $network_wide Whether the plugin is being activated for all sites in the network.
 	 *
 	 * @return void
 	 */
-	public static function activate(): void {
+	public static function activate( bool $network_wide = false ): void {
 		if ( ! self::check_requirements() ) {
 			deactivate_plugins( plugin_basename( self::$plugin_file ) );
 			wp_die(
@@ -70,6 +73,30 @@ final class Bootloader {
 			);
 		}
 
+		if ( $network_wide && is_multisite() ) {
+			$site_ids = get_sites( [ 'fields' => 'ids' ] );
+
+			if ( ! empty( $site_ids ) ) {
+				foreach ( $site_ids as $site_id ) {
+					switch_to_blog( (int) $site_id );
+					self::activate_for_site();
+				}
+
+				restore_current_blog();
+			}
+
+			return;
+		}
+
+		self::activate_for_site();
+	}
+
+	/**
+	 * Write default options and activation transient for the current site.
+	 *
+	 * @return void
+	 */
+	private static function activate_for_site(): void {
 		add_option(
 			'sparxstar_photon_vcard_options',
 			[
@@ -80,11 +107,13 @@ final class Bootloader {
 		);
 
 		set_transient( 'sparxstar_photon_vcard_activation_notice', true, 60 );
-		flush_rewrite_rules();
 	}
 
 	/**
 	 * Deactivation hook callback.
+	 *
+	 * On multisite network deactivation the transient is removed for every
+	 * site in the network.
 	 *
 	 * @param bool $network_wide Whether the plugin is being deactivated for all sites in the network.
 	 *
@@ -92,17 +121,12 @@ final class Bootloader {
 	 */
 	public static function deactivate( bool $network_wide = false ): void {
 		if ( $network_wide && is_multisite() ) {
-			$site_ids = get_sites(
-				[
-					'fields' => 'ids',
-				]
-			);
+			$site_ids = get_sites( [ 'fields' => 'ids' ] );
 
 			if ( ! empty( $site_ids ) ) {
 				foreach ( $site_ids as $site_id ) {
 					switch_to_blog( (int) $site_id );
 					delete_transient( 'sparxstar_photon_vcard_activation_notice' );
-					flush_rewrite_rules();
 				}
 
 				restore_current_blog();
@@ -110,8 +134,8 @@ final class Bootloader {
 
 			return;
 		}
+
 		delete_transient( 'sparxstar_photon_vcard_activation_notice' );
-		flush_rewrite_rules();
 	}
 
 	/**
