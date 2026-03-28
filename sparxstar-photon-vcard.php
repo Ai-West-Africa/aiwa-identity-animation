@@ -30,7 +30,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /** Current plugin version. */
-define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '1.0.0' );
+define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '0.5.0' );
 
 /** Minimum PHP version required. */
 define( 'SPARXSTAR_PHOTON_VCARD_MIN_PHP_VERSION', '8.2' );
