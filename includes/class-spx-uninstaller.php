@@ -22,15 +22,62 @@ final class Uninstaller {
 	/**
 	 * Execute all cleanup routines in sequence.
 	 *
+	 * Handles both single-site and multisite uninstalls.
+	 *
 	 * @return void
 	 */
 	public static function run(): void {
+		// User meta is stored in a global table and should be deleted once.
+		self::delete_user_meta();
+
+		if ( function_exists( 'is_multisite' ) && is_multisite() && function_exists( 'get_sites' ) ) {
+			$sites = get_sites(
+				array(
+					'number' => 0,
+				)
+			);
+
+			if ( ! empty( $sites ) ) {
+				if ( function_exists( 'get_current_blog_id' ) ) {
+					$original_blog_id = get_current_blog_id();
+				} else {
+					$original_blog_id = 0;
+				}
+
+				foreach ( $sites as $site ) {
+					if ( empty( $site->blog_id ) ) {
+						continue;
+					}
+
+					switch_to_blog( (int) $site->blog_id );
+					self::run_for_site();
+				}
+
+				if ( 0 !== $original_blog_id ) {
+					switch_to_blog( (int) $original_blog_id );
+				}
+			} else {
+				// Fallback: no sites found, perform cleanup for the current site context.
+				self::run_for_site();
+			}
+		} else {
+			// Single-site installation.
+			self::run_for_site();
+		}
+
+		wp_cache_flush();
+	}
+
+	/**
+	 * Execute per-site cleanup routines.
+	 *
+	 * @return void
+	 */
+	private static function run_for_site(): void {
 		self::delete_options();
 		self::delete_transients();
-		self::delete_user_meta();
 		self::delete_tables();
 		self::delete_uploads();
-		wp_cache_flush();
 	}
 
 	/**
