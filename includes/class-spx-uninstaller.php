@@ -140,7 +140,19 @@ final class Uninstaller {
 	 * @return void
 	 */
 	private static function delete_uploads(): void {
-		$upload_dir        = wp_upload_dir();
+		$upload_dir = wp_upload_dir();
+
+		// Guard: wp_upload_dir() sets 'error' to a non-empty string on failure.
+		if ( ! empty( $upload_dir['error'] ) ) {
+			error_log(
+				sprintf(
+					'SPARXSTAR Photon VCard uninstall: wp_upload_dir() returned an error, skipping upload cleanup. Error: %s',
+					$upload_dir['error']
+				)
+			);
+			return;
+		}
+
 		$plugin_upload_dir = trailingslashit( $upload_dir['basedir'] ) . 'sparxstar-photon-vcard';
 
 		if ( is_dir( $plugin_upload_dir ) ) {
