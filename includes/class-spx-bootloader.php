@@ -86,9 +86,30 @@ final class Bootloader {
 	/**
 	 * Deactivation hook callback.
 	 *
+	 * @param bool $network_wide Whether the plugin is being deactivated for all sites in the network.
+	 *
 	 * @return void
 	 */
-	public static function deactivate(): void {
+	public static function deactivate( bool $network_wide = false ): void {
+		if ( $network_wide && is_multisite() ) {
+			$site_ids = get_sites(
+				[
+					'fields' => 'ids',
+				]
+			);
+
+			if ( ! empty( $site_ids ) ) {
+				foreach ( $site_ids as $site_id ) {
+					switch_to_blog( (int) $site_id );
+					delete_transient( 'sparxstar_photon_vcard_activation_notice' );
+					flush_rewrite_rules();
+				}
+
+				restore_current_blog();
+			}
+
+			return;
+		}
 		delete_transient( 'sparxstar_photon_vcard_activation_notice' );
 		flush_rewrite_rules();
 	}
