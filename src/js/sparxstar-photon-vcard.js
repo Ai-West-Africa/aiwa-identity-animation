@@ -82,6 +82,9 @@ window.addEventListener('pagehide', () => this.releaseWakeLock());
 
 // Fallback triggers are always active.
 this.setupFallbacks();
+
+// Always render the direct open button so any visitor can open the card.
+this.renderOpenButton();
 }
 
 isLowEndDevice() {
@@ -129,6 +132,19 @@ btn.addEventListener('click', () => {
 this.requestSensorAccess();
 btn.remove();
 }, { passive: true });
+
+document.body.appendChild(btn);
+}
+
+renderOpenButton() {
+if (document.getElementById('spax-photon-open-btn')) return;
+
+const btn = document.createElement('button');
+btn.id = 'spax-photon-open-btn';
+btn.type = 'button';
+btn.textContent = 'View Business Card';
+btn.setAttribute('aria-label', 'Open digital business card');
+btn.addEventListener('click', () => this.openCard('button'), { passive: true });
 
 document.body.appendChild(btn);
 }
@@ -303,6 +319,10 @@ this.lastFocus = document.activeElement;
 this.state.isActive = true;
 this.disableSensors();
 
+// Hide the open button while the card is visible.
+const openBtn = document.getElementById('spax-photon-open-btn');
+if (openBtn) openBtn.hidden = true;
+
 // iOS safe scroll lock (CSS expects body.spax-photon-card-active + fixed).
 this.state.scrollPos = window.scrollY;
 document.body.style.top = `-${this.state.scrollPos}px`;
@@ -419,6 +439,10 @@ detail: { type: 'close', timestamp: Date.now() }
 }));
 
 overlay.remove();
+
+// Restore the open button.
+const openBtn = document.getElementById('spax-photon-open-btn');
+if (openBtn) openBtn.hidden = false;
 
 // Restore focus for accessibility.
 if (this.lastFocus) {
