@@ -52,33 +52,39 @@ final class AssetLoader {
 	/**
 	 * Enqueue plugin CSS, JS, and pass card data via wp_localize_script.
 	 *
-	 * All auth / permission checks are performed here so nothing is enqueued
-	 * for visitors who are not entitled to the card.
+	 * The card belongs to the post author and is visible to any visitor of
+	 * the post.  Assets are only enqueued on singular pages whose author
+	 * holds an allowed role.
 	 *
 	 * @return void
 	 */
 	public function enqueue_assets(): void {
-		// 1. FAIL FAST
-		if ( ! is_user_logged_in() || ! is_singular() ) {
+		// 1. ONLY SINGULAR PAGES / POSTS
+		if ( ! is_singular() ) {
 			return;
 		}
 
-		$user_id  = get_current_user_id();
 		$post_obj = get_queried_object();
 
-		// 2. AUTHORSHIP GUARD
-		if ( ! $post_obj instanceof \WP_Post || (int) $post_obj->post_author !== $user_id ) {
+		// 2. REQUIRE A REAL POST OBJECT
+		if ( ! $post_obj instanceof \WP_Post ) {
 			return;
 		}
 
-		$user = get_userdata( $user_id );
+		// 3. USE POST AUTHOR DATA — the card belongs to the author, not the viewer.
+		$author_id = (int) $post_obj->post_author;
+		if ( $author_id <= 0 ) {
+			return;
+		}
 
-		// 3. TYPE SAFETY
+		$user = get_userdata( $author_id );
+
+		// 4. TYPE SAFETY
 		if ( ! $user instanceof \WP_User ) {
 			return;
 		}
 
-		// 4. PERMISSION CHECK
+		// 5. PERMISSION CHECK — only authors with an allowed role get a card.
 		$allowed_roles = [ 'administrator', 'vip_business_user', 'editor' ];
 		if ( empty( array_intersect( $allowed_roles, (array) $user->roles ) ) ) {
 			return;
@@ -88,7 +94,7 @@ final class AssetLoader {
 		$css_file = $debug ? 'sparxstar-photon-vcard.css' : 'sparxstar-photon-vcard.min.css';
 		$js_file  = $debug ? 'sparxstar-photon-vcard.js'  : 'sparxstar-photon-vcard.min.js';
 
-		// 5. REGISTER & ENQUEUE QR LIBRARY (local asset, no CDN dependency).
+		// 6. REGISTER & ENQUEUE QR LIBRARY (local asset, no CDN dependency).
 		//    Build the dependency list dynamically so the main script is never
 		//    silently dropped by WordPress when the QR file is missing.
 		$script_deps = [];
@@ -110,7 +116,7 @@ final class AssetLoader {
 			);
 		}
 
-		// 6. ENQUEUE STYLESHEET
+		// 7. ENQUEUE STYLESHEET
 		wp_enqueue_style(
 			'spx-photon-vcard',
 			SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/css/' . $css_file,
@@ -118,7 +124,7 @@ final class AssetLoader {
 			SPARXSTAR_PHOTON_VCARD_VERSION
 		);
 
-		// 7. ENQUEUE MAIN SCRIPT
+		// 8. ENQUEUE MAIN SCRIPT
 		wp_enqueue_script(
 			'spx-photon-vcard',
 			SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/' . $js_file,
@@ -127,11 +133,11 @@ final class AssetLoader {
 			true
 		);
 
-		// 8. ENTERPRISE CONFIGURATION (Filter Hook)
+		// 9. ENTERPRISE CONFIGURATION (Filter Hook)
 		$disable_sensors = apply_filters(
 			'sparxstar_photon_vcard_disable_sensors',
 			false,
-			$user_id,
+			$author_id,
 			$post_obj->ID
 		);
 
@@ -139,21 +145,21 @@ final class AssetLoader {
 		$disable_sensors = apply_filters(
 			'vip_motion_disable_sensors',
 			$disable_sensors,
-			$user_id,
+			$author_id,
 			$post_obj->ID
 		);
 
-		// 9. PASS CARD DATA (replaces inline JSON — no XSS risk).
-		//    The JS global is SPX_PHOTON_VCARD (spx_ prefix per WP VIP standards).
+		// 10. PASS CARD DATA (replaces inline JSON — no XSS risk).
+		//     The JS global is SPX_PHOTON_VCARD (spx_ prefix per WP VIP standards).
 		wp_localize_script(
 			'spx-photon-vcard',
 			'SPX_PHOTON_VCARD',
 			[
-				'name'     => get_user_meta( $user_id, 'scf_full_name', true ) ?: $user->display_name,
-				'title'    => get_user_meta( $user_id, 'scf_job_title', true ) ?: __( 'Business Associate', 'sparxstar-photon-vcard' ),
-				'phone'    => get_user_meta( $user_id, 'scf_phone_number', true ) ?: '',
+				'name'     => get_user_meta( $author_id, 'scf_full_name', true ) ?: $user->display_name,
+				'title'    => get_user_meta( $author_id, 'scf_job_title', true ) ?: __( 'Business Associate', 'sparxstar-photon-vcard' ),
+				'phone'    => get_user_meta( $author_id, 'scf_phone_number', true ) ?: '',
 				'email'    => $user->user_email,
-				'logo'     => get_user_meta( $user_id, 'scf_business_logo_url', true ) ?: '',
+				'logo'     => get_user_meta( $author_id, 'scf_business_logo_url', true ) ?: '',
 				'noSensor' => (bool) $disable_sensors,
 			]
 		);
