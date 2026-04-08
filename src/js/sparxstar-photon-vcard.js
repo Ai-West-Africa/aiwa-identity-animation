@@ -438,7 +438,7 @@ const logoSrc  = userData.logo  ? this.safeURL(userData.logo)  : '';
 overlay.innerHTML = `
 <div class="spax-photon-card" role="region" aria-label="Business card details">
   <div class="spax-photon-card-header">
-    ${photoSrc ? `<img src="${photoSrc}" class="spax-photon-photo" alt="${name}" width="60" height="60" loading="eager" decoding="async">` : ''}
+    ${photoSrc ? `<img src="${photoSrc}" class="spax-photon-photo" alt="${name}" width="60" height="60" loading="eager" decoding="async" onerror="this.style.display='none'">` : ''}
     <div class="spax-photon-identity">
       ${name    ? `<div class="spax-photon-name">${name}</div>` : ''}
       ${title   ? `<div class="spax-photon-title">${title}</div>` : ''}
@@ -590,16 +590,19 @@ const phones  = Array.isArray(userData.phones) ? userData.phones : [];
 const whatsapp = String(userData.whatsapp || '').replace(/\s/g, '').trim();
 const addr     = userData.address || {};
 
-// Parse name for N field (Last;First)
-const parts    = name.split(' ');
-const lastName  = parts.length > 1 ? parts[parts.length - 1] : '';
-const firstName = parts.length > 1 ? parts.slice(0, -1).join(' ') : name;
+// Parse name for the N field (Last;First;;;).
+// Only split when the name has exactly one space (clear Western first/last).
+// For all other patterns (single word, multi-word, CJK, etc.) populate only FN.
+const parts     = name.split(' ');
+const lastName  = parts.length === 2 ? parts[1] : '';
+const firstName = parts.length === 2 ? parts[0] : '';
+const nField    = parts.length === 2 ? `N:${lastName};${firstName};;;` : `N:${name};;;;`;
 
 const lines = [
 'BEGIN:VCARD',
 'VERSION:3.0',
 `FN:${name}`,
-`N:${lastName};${firstName};;;`
+nField
 ];
 
 if (title)   lines.push(`TITLE:${title}`);
@@ -619,7 +622,8 @@ lines.push(`X-WHATSAPP:${whatsapp.replace(/\s+/g, '')}`);
 if (email)   lines.push(`EMAIL:${email}`);
 if (website) lines.push(`URL:${website}`);
 
-// ADR: ;;street;city;state;postcode;country
+// ADR vCard 3.0 field order: PO-Box;Extended-Addr;Street;City;State;Postal;Country
+// s1 = street address line 1 (Street), s2 = line 2 (Extended, e.g. suite/apt).
 const s1 = String(addr.street1  || '').replace(/[;\r\n]/g, ' ').trim();
 const s2 = String(addr.street2  || '').replace(/[;\r\n]/g, ' ').trim();
 const ct = String(addr.city     || '').replace(/[;\r\n]/g, ' ').trim();
@@ -628,7 +632,7 @@ const pc = String(addr.postcode || '').replace(/[;\r\n]/g, ' ').trim();
 const co = String(addr.country  || '').replace(/[;\r\n]/g, ' ').trim();
 
 if (s1 || ct || st || co) {
-lines.push(`ADR;TYPE=WORK:;;${s1};${ct};${st};${pc};${co}`);
+lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
 }
 
 if (photo) {

@@ -304,11 +304,9 @@ final class AssetLoader {
 		}
 
 		// ── Photo (Gravatar) ─────────────────────────────────────────────────────
-		$photo = (string) get_avatar_url( $uid, [ 'size' => 200, 'default' => '404' ] );
-		// If Gravatar returns the 404 placeholder, treat as absent.
-		if ( str_contains( $photo, 'd=404' ) || str_contains( $photo, 'd%3D404' ) ) {
-			$photo = '';
-		}
+		// Pass the Gravatar URL as-is; the JS img.onerror handler hides a broken
+		// image (e.g. when the user has no Gravatar and the host returns a 404).
+		$photo = (string) get_avatar_url( $uid, [ 'size' => 200 ] );
 
 		// ── Business logo (legacy SCF / custom meta) ─────────────────────────────
 		$logo = (string) ( get_user_meta( $uid, 'scf_business_logo_url', true ) ?: '' );
