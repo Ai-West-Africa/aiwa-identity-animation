@@ -52,8 +52,6 @@ shakeWindow: 1200         // ms window for shake sequence
 };
 
 this.state = {
-taps: 0,
-lastTapTime: 0,
 lastCloseTime: 0,
 isFaceDown: false,
 isActive: false,
@@ -314,6 +312,7 @@ handleMotion(event) {
 if (this.state.isActive) return;
 if (!this.state.sensorBound) return;
 
+this.resetSensorAutoDisable();
 const acc = event.accelerationIncludingGravity;
 if (!acc) return;
 
@@ -568,7 +567,6 @@ window.scrollTo(0, this.state.scrollPos);
 this.state.isActive      = false;
 this.state.lastCloseTime = Date.now();
 this.state.isFaceDown    = false;
-this.state.taps          = 0;
 
 if (this.timers.stabilizer) { clearTimeout(this.timers.stabilizer); this.timers.stabilizer = null; }
 if (this.timers.longPress)  { clearTimeout(this.timers.longPress);  this.timers.longPress  = null; }
@@ -659,13 +657,15 @@ if (company) lines.push(`ORG:${ve(company)}`);
 
 phones.forEach(p => {
 if (p && p.number) {
-lines.push(`TEL;TYPE=${(p.type || 'VOICE').toUpperCase()}:${String(p.number).replace(/\s+/g, '')}`);
+const phoneValue = ve(String(p.number).replace(/\s+/g, ''));
+lines.push(`TEL;TYPE=${(p.type || 'VOICE').toUpperCase()}:${phoneValue}`);
 }
 });
 
 if (whatsapp) {
-lines.push(`TEL;TYPE=CELL,VOICE:${whatsapp.replace(/\s+/g, '')}`);
-lines.push(`X-WHATSAPP:${whatsapp.replace(/\s+/g, '')}`);
+const whatsappValue = ve(String(whatsapp).replace(/\s+/g, ''));
+lines.push(`TEL;TYPE=CELL,VOICE:${whatsappValue}`);
+lines.push(`X-WHATSAPP:${whatsappValue}`);
 }
 
 if (email)   lines.push(`EMAIL:${email}`);
@@ -680,7 +680,7 @@ const st = ve(String(addr.state    || '').trim());
 const pc = ve(String(addr.postcode || '').trim());
 const co = ve(String(addr.country  || '').trim());
 
-if (s1 || ct || st || co) {
+if (s1 || s2 || ct || st || pc || co) {
 lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
 }
 

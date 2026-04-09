@@ -82,10 +82,15 @@ final class AssetLoader {
 	}
 
 	/**
-	 * Automatic enqueue on singular pages — driven by the post author.
+	 * Automatic enqueue on singular pages.
 	 *
-	 * Skipped when the page contains the [spx_photon_vcard] shortcode,
-	 * because the shortcode callback calls enqueue_for_user() directly.
+	 * When the page contains [spx_photon_vcard] shortcodes the user IDs are
+	 * resolved from the shortcode attributes and pre-enqueued here, during
+	 * the wp_enqueue_scripts action, so that the stylesheet always lands in
+	 * <head>.  The shortcode callback's enqueue_for_user() call is idempotent
+	 * and becomes a no-op for users already registered.
+	 *
+	 * For shortcode-free singular pages the post author's card is enqueued.
 	 *
 	 * @return void
 	 */
@@ -100,8 +105,12 @@ final class AssetLoader {
 			return;
 		}
 
-		// Shortcode path takes priority — it handles its own enqueue.
+		// When the page contains [spx_photon_vcard] shortcodes, pre-enqueue
+		// all referenced users now so the stylesheet is in <head>.
 		if ( has_shortcode( $post_obj->post_content, 'spx_photon_vcard' ) ) {
+			foreach ( self::extract_shortcode_user_ids( $post_obj ) as $uid ) {
+				self::enqueue_for_user( $uid, $post_obj->ID );
+			}
 			return;
 		}
 
@@ -111,6 +120,51 @@ final class AssetLoader {
 		}
 
 		self::enqueue_for_user( $author_id, $post_obj->ID );
+	}
+
+	/**
+	 * Extract resolved user IDs from [spx_photon_vcard] shortcodes in post content.
+	 *
+	 * Uses the same resolution chain as Shortcode::render():
+	 *   explicit user_id attribute → post author → logged-in user.
+	 * De-duplicates the result while preserving declaration order.
+	 *
+	 * @param  \WP_Post $post_obj The post whose content is parsed.
+	 * @return int[]              Ordered, unique resolved user IDs (>0).
+	 */
+	private static function extract_shortcode_user_ids( \WP_Post $post_obj ): array {
+		$uids  = [];
+		$regex = get_shortcode_regex( [ 'spx_photon_vcard' ] );
+
+		if ( ! preg_match_all( '/' . $regex . '/s', $post_obj->post_content, $matches, PREG_SET_ORDER ) ) {
+			// has_shortcode() said yes but regex found nothing — defensive fallback.
+			$uid = (int) $post_obj->post_author > 0
+				? (int) $post_obj->post_author
+				: get_current_user_id();
+			if ( $uid > 0 ) {
+				$uids[] = $uid;
+			}
+			return $uids;
+		}
+
+		foreach ( $matches as $m ) {
+			$raw_atts = shortcode_parse_atts( $m[3] ?? '' );
+			$atts     = is_array( $raw_atts ) ? $raw_atts : [];
+
+			if ( ! empty( $atts['user_id'] ) && (int) $atts['user_id'] > 0 ) {
+				$uid = (int) $atts['user_id'];
+			} elseif ( (int) $post_obj->post_author > 0 ) {
+				$uid = (int) $post_obj->post_author;
+			} else {
+				$uid = get_current_user_id();
+			}
+
+			if ( $uid > 0 && ! in_array( $uid, $uids, true ) ) {
+				$uids[] = $uid;
+			}
+		}
+
+		return $uids;
 	}
 
 	/**

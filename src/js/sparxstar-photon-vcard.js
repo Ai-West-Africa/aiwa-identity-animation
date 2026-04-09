@@ -52,8 +52,6 @@ shakeWindow: 1200         // ms window for shake sequence
 };
 
 this.state = {
-taps: 0,
-lastTapTime: 0,
 lastCloseTime: 0,
 isFaceDown: false,
 isActive: false,
@@ -569,7 +567,6 @@ window.scrollTo(0, this.state.scrollPos);
 this.state.isActive      = false;
 this.state.lastCloseTime = Date.now();
 this.state.isFaceDown    = false;
-this.state.taps          = 0;
 
 if (this.timers.stabilizer) { clearTimeout(this.timers.stabilizer); this.timers.stabilizer = null; }
 if (this.timers.longPress)  { clearTimeout(this.timers.longPress);  this.timers.longPress  = null; }
