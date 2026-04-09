@@ -660,13 +660,15 @@ if (company) lines.push(`ORG:${ve(company)}`);
 
 phones.forEach(p => {
 if (p && p.number) {
-lines.push(`TEL;TYPE=${(p.type || 'VOICE').toUpperCase()}:${String(p.number).replace(/\s+/g, '')}`);
+const phoneValue = ve(String(p.number).replace(/\s+/g, ''));
+lines.push(`TEL;TYPE=${(p.type || 'VOICE').toUpperCase()}:${phoneValue}`);
 }
 });
 
 if (whatsapp) {
-lines.push(`TEL;TYPE=CELL,VOICE:${whatsapp.replace(/\s+/g, '')}`);
-lines.push(`X-WHATSAPP:${whatsapp.replace(/\s+/g, '')}`);
+const whatsappValue = ve(String(whatsapp).replace(/\s+/g, ''));
+lines.push(`TEL;TYPE=CELL,VOICE:${whatsappValue}`);
+lines.push(`X-WHATSAPP:${whatsappValue}`);
 }
 
 if (email)   lines.push(`EMAIL:${email}`);
