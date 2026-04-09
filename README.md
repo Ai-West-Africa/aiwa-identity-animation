@@ -102,7 +102,7 @@ Card data is resolved per user using the following priority chain:
 
 3.  **WordPress core** — `display_name`, `user_email`, `user_url`
 
-4.  **Gravatar** — profile photo derived from the user's email hash (512 px, `d=404`)
+4.  **Gravatar** — profile photo derived from the user's email hash via WordPress avatar resolution (`size` 200)
 
 The enriched payload is localized to JavaScript as `window.SPX_PHOTON_VCARD_USERS[uid]`. When the plugin auto-enqueues for the current user (non-shortcode path), the default uid is also stored in `window.SPX_PHOTON_VCARD_DEFAULT`.
 
