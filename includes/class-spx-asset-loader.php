@@ -127,6 +127,15 @@ final class AssetLoader {
 			[ 'administrator', 'vip_business_user', 'editor' ],
 			$user_id
 		);
+		$allowed_roles = array_values(
+			array_filter(
+				array_map(
+					static fn( $role ): string => (string) $role,
+					(array) $allowed_roles
+				),
+				static fn( string $role ): bool => '' !== $role
+			)
+		);
 
 		if ( empty( array_intersect( $allowed_roles, (array) $user->roles ) ) ) {
 			return;
