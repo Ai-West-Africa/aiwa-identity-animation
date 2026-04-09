@@ -438,7 +438,7 @@ const logoSrc  = userData.logo  ? this.safeURL(userData.logo)  : '';
 overlay.innerHTML = `
 <div class="spax-photon-card" role="region" aria-label="Business card details">
   <div class="spax-photon-card-header">
-    ${photoSrc ? `<img src="${photoSrc}" class="spax-photon-photo" alt="${name}" width="60" height="60" loading="eager" decoding="async" onerror="this.style.display='none'">` : ''}
+    ${photoSrc ? `<img src="${photoSrc}" class="spax-photon-photo" alt="${name}" width="60" height="60" loading="eager" decoding="async">` : ''}
     <div class="spax-photon-identity">
       ${name    ? `<div class="spax-photon-name">${name}</div>` : ''}
       ${title   ? `<div class="spax-photon-title">${title}</div>` : ''}
