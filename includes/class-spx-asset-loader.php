@@ -326,9 +326,12 @@ final class AssetLoader {
 		}
 
 		// ── Website ──────────────────────────────────────────────────────────────
-		$website = $user->user_url ?: '';
-		if ( '' === $website && function_exists( 'get_field' ) ) {
+		$website = '';
+		if ( function_exists( 'get_field' ) ) {
 			$website = (string) ( get_field( 'spx_website', 'user_' . $uid ) ?: '' );
+		}
+		if ( '' === $website ) {
+			$website = $user->user_url ?: '';
 		}
 
 		// ── Postal address ───────────────────────────────────────────────────────
