@@ -354,9 +354,16 @@ final class AssetLoader {
 		}
 
 		// ── Photo (Gravatar) ─────────────────────────────────────────────────────
-		// Pass the Gravatar URL as-is; the JS img.onerror handler hides a broken
-		// image (e.g. when the user has no Gravatar and the host returns a 404).
-		$photo = (string) get_avatar_url( $uid, [ 'size' => 200 ] );
+		// Request a 404 when the user has no Gravatar so the JS img.onerror
+		// handler can reliably hide the broken image instead of showing a
+		// WordPress default avatar fallback.
+		$photo = (string) get_avatar_url(
+			$uid,
+			[
+				'size'    => 200,
+				'default' => '404',
+			]
+		);
 
 		// ── Business logo (legacy SCF / custom meta) ─────────────────────────────
 		$logo = (string) ( get_user_meta( $uid, 'scf_business_logo_url', true ) ?: '' );
