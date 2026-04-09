@@ -314,6 +314,7 @@ handleMotion(event) {
 if (this.state.isActive) return;
 if (!this.state.sensorBound) return;
 
+this.resetSensorAutoDisable();
 const acc = event.accelerationIncludingGravity;
 if (!acc) return;
 
