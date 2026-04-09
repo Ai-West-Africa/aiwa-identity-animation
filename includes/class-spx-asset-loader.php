@@ -367,7 +367,7 @@ final class AssetLoader {
 			'title'     => sanitize_text_field( $title ),
 			'phones'    => array_map(
 				static fn( array $p ): array => [
-					'type'   => sanitize_key( $p['type'] ),
+					'type'   => strtoupper( sanitize_key( $p['type'] ) ),
 					'number' => sanitize_text_field( $p['number'] ),
 				],
 				$phones

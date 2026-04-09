@@ -271,7 +271,7 @@ color: #90caf9;
 .spax-photon-close {
 background: transparent;
 border: none;
-color: #48484a;
+color: #aeaeb2;
 font-size: 0.85rem;
 cursor: pointer;
 min-height: 44px;
@@ -281,7 +281,7 @@ transition: color 0.18s ease;
 }
 
 .spax-photon-close:hover {
-color: #8e8e93;
+color: #e5e5ea;
 }
 
 /* Focus rings — keyboard only */
