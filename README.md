@@ -412,9 +412,9 @@ This plugin is intended to be:
 
 -   Loaded only on authorized pages (per-user `spx_display_business_card` toggle)
 
--   Used by authenticated users
+-   Available on rendered pages to site visitors and authenticated users; viewing the card is not authentication-gated by default
 
--   Governed by server-side role permissions (configurable via the `sparxstar_photon_vcard_allowed_roles` filter)
+-   Governed by server-side role permissions where enforced by the host site, configurable via the `sparxstar_photon_vcard_allowed_roles` filter
 
 -   Governed by server-side permissions
 
