@@ -94,15 +94,36 @@ Place the card trigger button anywhere in post/page content using the `[spx_phot
 Data Layer
 ----------
 
-Card data is resolved per user using the following priority chain:
+Card data is assembled in layers. Because this is a commercial plugin, different deployments will have different combinations of data sources installed. The resolver is designed for that reality: each layer enriches or overrides what the layer below provides.
 
-1.  **WooCommerce billing meta** — `billing_company`, `billing_phone`, `billing_address_1/2`, `billing_city`, `billing_state`, `billing_postcode`, `billing_country`
+### Layer 1 — WordPress core (always available)
 
-2.  **ACF `spx_*` fields** — `spx_title`, `spx_work_phone`, `spx_mobile`, `spx_fax`, `spx_whatsapp_phone`, `spx_company`, `spx_address_*`, `spx_website`
+Every WordPress installation provides the baseline: `display_name` (name), `user_email`, and `user_url`. These fields are always resolved and are the universal fallback for any field not supplied by a higher layer.
 
-3.  **WordPress core** — `display_name`, `user_email`, `user_url`
+### Layer 2 — ACF / SCF custom fields (when ACF or Secure Custom Fields is installed)
 
-4.  **Gravatar** — profile photo derived from the user's email hash via WordPress avatar resolution (`size` 200)
+ACF `spx_*` fields are the primary data source for dedicated business-card data. When ACF is active they take precedence over WP core for every field they cover:
+
+-   **Title** — `spx_title`
+-   **Phones** — `spx_mobile` (CELL), `spx_work_phone` (WORK), `spx_fax` (FAX)
+-   **WhatsApp** — `spx_whatsapp_phone`
+-   **Website** — `spx_website` (falls back to `user_url` when empty)
+-   **Display toggle** — `spx_display_business_card` (card is suppressed when false)
+-   **Company / address** — `spx_company`, `spx_address_1/2`, `spx_city`, `spx_state`, `spx_postcode`, `spx_country` (only registered and used when WooCommerce is absent)
+
+### Layer 3 — Gravatar (profile photo)
+
+The profile photo is fetched via WordPress's `get_avatar_url()` using the user's email hash (`size` 200, `default '404'`). The JS overlay hides the `<img>` element when the URL returns 404 (no Gravatar uploaded).
+
+### Layer 4 — WooCommerce billing meta (when WooCommerce is installed)
+
+When WooCommerce is present it contributes billing-specific data that is preferred over ACF fallback values for the fields it covers:
+
+-   **Name** — `billing_first_name` + `billing_last_name` (preferred over `display_name`)
+-   **Company** — `billing_company` (falls back to ACF `spx_company` when empty)
+-   **Email** — `billing_email` (overrides `user_email` when present)
+-   **Phone** — `billing_phone` (used as CELL fallback only when no ACF phone fields are set)
+-   **Address** — `billing_address_1/2`, `billing_city`, `billing_state`, `billing_postcode`, `billing_country` (replaces ACF address fields entirely when WooCommerce is installed)
 
 The enriched payload is localized to JavaScript as `window.SPX_PHOTON_VCARD_USERS[uid]`. When the plugin auto-enqueues for the current user (non-shortcode path), the default uid is also stored in `window.SPX_PHOTON_VCARD_DEFAULT`.
 

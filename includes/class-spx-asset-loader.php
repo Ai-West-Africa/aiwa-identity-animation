@@ -247,8 +247,12 @@ final class AssetLoader {
 	/**
 	 * Assemble the card data array for use in the JavaScript users map.
 	 *
-	 * Data is sourced (in priority order) from WooCommerce billing meta,
-	 * ACF custom fields, and core WordPress user fields.
+	 * Data is sourced from multiple layers, each enriching or overriding the
+	 * previous one.  Resolution order (lowest to highest precedence):
+	 *   1. WordPress core   — display_name, user_email, user_url
+	 *   2. ACF / SCF fields — spx_* custom business-card fields
+	 *   3. Gravatar         — profile photo via get_avatar_url()
+	 *   4. WooCommerce      — billing meta (name, company, email, phone, address)
 	 *
 	 * @param  \WP_User $user            The card owner.
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
