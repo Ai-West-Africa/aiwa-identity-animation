@@ -414,7 +414,7 @@ This plugin is intended to be:
 
 -   Used by authenticated users
 
--   Governed by server-side role permissions (configurable via the `spx_photon_vcard_allowed_roles` filter)
+-   Governed by server-side role permissions (configurable via the `sparxstar_photon_vcard_allowed_roles` filter)
 
 -   Governed by server-side permissions
 
