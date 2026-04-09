@@ -683,7 +683,7 @@ const st = ve(String(addr.state    || '').trim());
 const pc = ve(String(addr.postcode || '').trim());
 const co = ve(String(addr.country  || '').trim());
 
-if (s1 || ct || st || co) {
+if (s1 || s2 || ct || st || pc || co) {
 lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
 }
 
