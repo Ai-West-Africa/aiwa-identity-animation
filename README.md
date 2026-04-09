@@ -77,7 +77,7 @@ Place the card trigger button anywhere in post/page content using the `[spx_phot
 | `text` | `"View My Card"` | Button label |
 | `class` | `""` | Extra CSS classes added to the button |
 | `id` | `""` | HTML `id` attribute on the button |
-| `user_id` | Current logged-in user | WordPress user ID whose card data to display |
+| `user_id` | Explicit attribute, otherwise current post author, otherwise current logged-in user | WordPress user ID whose card data to display |
 
 ### Behaviour
 
