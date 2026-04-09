@@ -12,13 +12,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Asset loader / front-end orchestrator.
  *
  * Enqueues the plugin stylesheet, main script, and QR library, then passes
- * per-user card data to JavaScript via wp_localize_script.
+ * per-user card data to JavaScript via wp_add_inline_script.
  *
- * Data priority order for each field:
- *  – ACF custom fields (spx_*)          — always checked when ACF is active
- *  – WooCommerce billing meta           — used for address, company, email
- *  – WordPress core user fields         — user_url, user_email, display_name
+ * Data priority order for each field (first non-empty value wins):
+ *  – WooCommerce billing meta           — name, company, address, phone, email
+ *  – ACF custom fields (spx_*)          — title, phones, WhatsApp, address fallback
+ *  – WordPress core user fields         — display_name, user_url, user_email
  *  – Gravatar                           — photo via get_avatar_url()
+ *
+ * Multiple users may be localized in one request (e.g. pages with several
+ * [spx_photon_vcard user_id="..."] shortcodes).  Each user's payload is
+ * appended to the global window.SPX_PHOTON_VCARD_USERS map keyed by user ID.
+ * The first user registered in the request becomes window.SPX_PHOTON_VCARD_DEFAULT.
  *
  * Instantiated as a singleton by {@see Bootloader::init()}.  External code
  * (e.g. the [spx_photon_vcard] shortcode) calls the public static helper
@@ -26,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @package Starisian\Sparxstar\Photon
  * @since   1.0.0
- * @version 1.1.0
+ * @version 1.2.0
  */
 final class AssetLoader {
 
@@ -38,12 +43,24 @@ final class AssetLoader {
 	private static ?AssetLoader $instance = null;
 
 	/**
-	 * Tracks whether wp_localize_script has already been called so that
-	 * shortcode + automatic enqueue paths don't overwrite each other.
+	 * Tracks whether plugin CSS/JS assets have already been enqueued.
+	 *
+	 * Assets are enqueued once; card data for each additional user is appended
+	 * via wp_add_inline_script without re-enqueueing the files.
 	 *
 	 * @var bool
 	 */
-	private static bool $localized = false;
+	private static bool $assets_enqueued = false;
+
+	/**
+	 * User IDs for which card data has already been localized.
+	 *
+	 * Prevents duplicate inline scripts when the same user ID appears in
+	 * multiple [spx_photon_vcard] shortcodes on the same page.
+	 *
+	 * @var int[]
+	 */
+	private static array $localized_users = [];
 
 	/**
 	 * Private constructor — registers the wp_enqueue_scripts hook.
@@ -99,26 +116,28 @@ final class AssetLoader {
 	/**
 	 * Enqueue all card assets for the given user.
 	 *
-	 * Idempotent: subsequent calls within the same request are no-ops.
-	 * Safe to call from shortcode callbacks after wp_enqueue_scripts has fired,
-	 * as WordPress defers script/style output to wp_footer/wp_head.
+	 * Idempotent per user ID: a second call for the same user is a no-op.
+	 * Multiple distinct user IDs may be registered in one request — each
+	 * user's card data is appended to the global users map via an inline
+	 * script.  Assets (CSS/JS) are enqueued only on the first call.
 	 *
-	 * @param  int $user_id   Author / card owner user ID.
-	 * @param  int $post_id   Associated post ID (used for filter hooks). 0 for shortcode context.
-	 * @return void
+	 * @param  int  $user_id  Author / card owner user ID.
+	 * @param  int  $post_id  Associated post ID (used for filter hooks). 0 for shortcode context.
+	 * @return bool           True when assets and data were successfully enqueued, false when skipped.
 	 */
-	public static function enqueue_for_user( int $user_id, int $post_id = 0 ): void {
-		if ( self::$localized ) {
-			return;
+	public static function enqueue_for_user( int $user_id, int $post_id = 0 ): bool {
+		// Already localized for this user — nothing to do.
+		if ( in_array( $user_id, self::$localized_users, true ) ) {
+			return true;
 		}
 
 		if ( $user_id <= 0 ) {
-			return;
+			return false;
 		}
 
 		$user = get_userdata( $user_id );
 		if ( ! $user instanceof \WP_User ) {
-			return;
+			return false;
 		}
 
 		// Permission check — only allowed roles receive a card.
@@ -138,7 +157,7 @@ final class AssetLoader {
 		);
 
 		if ( empty( array_intersect( $allowed_roles, (array) $user->roles ) ) ) {
-			return;
+			return false;
 		}
 
 		// Honour the spx_display_business_card ACF toggle.
@@ -146,7 +165,7 @@ final class AssetLoader {
 			$display = get_field( 'spx_display_business_card', 'user_' . $user_id );
 			// Explicit false means "hide the card"; null / unset means default on.
 			if ( $display === false ) {
-				return;
+				return false;
 			}
 		}
 
@@ -154,60 +173,82 @@ final class AssetLoader {
 		$css_file = $debug ? 'sparxstar-photon-vcard.css' : 'sparxstar-photon-vcard.min.css';
 		$js_file  = $debug ? 'sparxstar-photon-vcard.js'  : 'sparxstar-photon-vcard.min.js';
 
-		// QR library (local asset — no CDN dependency).
-		$script_deps = [];
-		$qr_path     = SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'assets/js/qrcode.min.js';
-		if ( file_exists( $qr_path ) ) {
-			wp_register_script(
-				'spx-photon-qrcode',
-				SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/qrcode.min.js',
+		// Enqueue CSS/JS only once (first user registered in the request).
+		if ( ! self::$assets_enqueued ) {
+			// QR library (local asset — no CDN dependency).
+			$script_deps = [];
+			$qr_path     = SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'assets/js/qrcode.min.js';
+			if ( file_exists( $qr_path ) ) {
+				wp_register_script(
+					'spx-photon-qrcode',
+					SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/qrcode.min.js',
+					[],
+					SPARXSTAR_PHOTON_VCARD_VERSION,
+					true
+				);
+				wp_enqueue_script( 'spx-photon-qrcode' );
+				$script_deps[] = 'spx-photon-qrcode';
+			} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				trigger_error(
+					'SPARXSTAR Photon VCard: qrcode.min.js not found in assets/js/. The QR code feature will be unavailable.',
+					E_USER_WARNING
+				);
+			}
+
+			wp_enqueue_style(
+				'spx-photon-vcard',
+				SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/css/' . $css_file,
 				[],
+				SPARXSTAR_PHOTON_VCARD_VERSION
+			);
+
+			wp_enqueue_script(
+				'spx-photon-vcard',
+				SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/' . $js_file,
+				$script_deps,
 				SPARXSTAR_PHOTON_VCARD_VERSION,
 				true
 			);
-			wp_enqueue_script( 'spx-photon-qrcode' );
-			$script_deps[] = 'spx-photon-qrcode';
-		} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			trigger_error(
-				'SPARXSTAR Photon VCard: qrcode.min.js not found in assets/js/. The QR code feature will be unavailable.',
-				E_USER_WARNING
+
+			// Initialize the users map exactly once.
+			wp_add_inline_script(
+				'spx-photon-vcard',
+				'window.SPX_PHOTON_VCARD_USERS=window.SPX_PHOTON_VCARD_USERS||{};',
+				'before'
 			);
+
+			self::$assets_enqueued = true;
 		}
-
-		wp_enqueue_style(
-			'spx-photon-vcard',
-			SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/css/' . $css_file,
-			[],
-			SPARXSTAR_PHOTON_VCARD_VERSION
-		);
-
-		wp_enqueue_script(
-			'spx-photon-vcard',
-			SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/' . $js_file,
-			$script_deps,
-			SPARXSTAR_PHOTON_VCARD_VERSION,
-			true
-		);
 
 		// Enterprise sensor override filter.
 		$disable_sensors = apply_filters( 'sparxstar_photon_vcard_disable_sensors', false, $user_id, $post_id );
 		// Backwards-compat alias.
 		$disable_sensors = apply_filters( 'vip_motion_disable_sensors', $disable_sensors, $user_id, $post_id );
 
-		wp_localize_script(
-			'spx-photon-vcard',
-			'SPX_PHOTON_VCARD',
-			self::build_card_data( $user, $disable_sensors )
-		);
+		$card_data = self::build_card_data( $user, $disable_sensors );
 
-		self::$localized = true;
+		// Append this user's data to the map.
+		// The first user registered also becomes the default (for motion/keyboard triggers).
+		$is_first  = empty( self::$localized_users );
+		$json_data = wp_json_encode( $card_data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP );
+
+		$inline = 'window.SPX_PHOTON_VCARD_USERS[' . $user_id . ']=' . $json_data . ';';
+		if ( $is_first ) {
+			$inline .= 'window.SPX_PHOTON_VCARD_DEFAULT=' . $user_id . ';';
+		}
+
+		wp_add_inline_script( 'spx-photon-vcard', $inline, 'before' );
+
+		self::$localized_users[] = $user_id;
+
+		return true;
 	}
 
 	/**
-	 * Assemble the card data array passed to JavaScript.
+	 * Assemble the card data array for use in the JavaScript users map.
 	 *
-	 * Data is sourced (in priority order) from ACF custom fields, WooCommerce
-	 * billing meta, and core WordPress user fields.
+	 * Data is sourced (in priority order) from WooCommerce billing meta,
+	 * ACF custom fields, and core WordPress user fields.
 	 *
 	 * @param  \WP_User $user            The card owner.
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.

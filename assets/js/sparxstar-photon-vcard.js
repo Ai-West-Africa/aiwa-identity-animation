@@ -2,7 +2,7 @@
  * SPARXSTAR Photon VCard — front-end runtime.
  *
  * Bootstrapped by WordPress via wp_enqueue_script.  Card data is injected
- * by wp_localize_script as window.SPX_PHOTON_VCARD.
+ * via wp_add_inline_script as window.SPX_PHOTON_VCARD_USERS / window.SPX_PHOTON_VCARD_DEFAULT.
  *
  * Features:
  *  – Motion triggers: single face-down flip (deviceorientation) OR shake (devicemotion)
@@ -26,13 +26,13 @@
 if (window.__SPX_PHOTON_CARD_LOADED__) return;
 window.__SPX_PHOTON_CARD_LOADED__ = true;
 
-// 2) WordPress-provided data (via wp_localize_script → SPX_PHOTON_VCARD)
-// Shape: { name, company, title, phones[], whatsapp, email, website,
-//           photo, logo, address{street1,street2,city,state,postcode,country},
-//           noSensor }
-const userData = (window.SPX_PHOTON_VCARD && typeof window.SPX_PHOTON_VCARD === 'object')
-? window.SPX_PHOTON_VCARD
+// 2) WordPress-provided per-user card data map (via wp_add_inline_script).
+// window.SPX_PHOTON_VCARD_USERS  — map of { [uid]: cardData }
+// window.SPX_PHOTON_VCARD_DEFAULT — UID of the default card (post author / first shortcode user)
+const usersMap  = (window.SPX_PHOTON_VCARD_USERS && typeof window.SPX_PHOTON_VCARD_USERS === 'object')
+? window.SPX_PHOTON_VCARD_USERS
 : {};
+const defaultUid = Number(window.SPX_PHOTON_VCARD_DEFAULT) || 0;
 
 class SpxPhotonVCard {
 constructor() {
@@ -75,6 +75,8 @@ this.boundOrientationHandler = null;
 this.boundMotionHandler      = null;
 this.wakeLock  = null;
 this.lastFocus = null;
+// Active user for the current card display.
+this.activeUid = defaultUid;
 
 this.init();
 }
@@ -85,8 +87,9 @@ this.init();
 
 init() {
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const defaultData   = usersMap[defaultUid] || {};
 
-if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
+if (!reducedMotion && !defaultData.noSensor && !this.isLowEndDevice()) {
 this.setupMotion();
 }
 
@@ -101,6 +104,11 @@ this.setupShortcodeTriggers();
 if (!document.querySelector('[data-spx-vcard-trigger]')) {
 this.renderOpenButton();
 }
+}
+
+/** Returns the card data for the currently active user. */
+get d() {
+return usersMap[this.activeUid] || {};
 }
 
 isLowEndDevice() {
@@ -161,7 +169,8 @@ btn.id = 'spax-photon-open-btn';
 btn.type = 'button';
 btn.textContent = 'View Business Card';
 btn.setAttribute('aria-label', 'Open digital business card');
-btn.addEventListener('click', () => this.openCard('button'), { passive: true });
+btn.dataset.spxVcardUid = String(defaultUid);
+btn.addEventListener('click', () => this.openCard('button', defaultUid), { passive: true });
 
 document.body.appendChild(btn);
 }
@@ -169,7 +178,8 @@ document.body.appendChild(btn);
 setupShortcodeTriggers() {
 const triggers = document.querySelectorAll('[data-spx-vcard-trigger]');
 triggers.forEach(el => {
-el.addEventListener('click', () => this.openCard('shortcode'), { passive: true });
+const uid = Number(el.dataset.spxVcardUid) || defaultUid;
+el.addEventListener('click', () => this.openCard('shortcode', uid), { passive: true });
 });
 }
 
@@ -177,30 +187,59 @@ async requestSensorAccess() {
 if (this.state.sensorBound) return;
 
 try {
-if (typeof DeviceOrientationEvent !== 'undefined' &&
-typeof DeviceOrientationEvent.requestPermission === 'function') {
+const needsOrientPerm = typeof DeviceOrientationEvent !== 'undefined' &&
+typeof DeviceOrientationEvent.requestPermission === 'function';
+const needsMotionPerm = typeof DeviceMotionEvent !== 'undefined' &&
+typeof DeviceMotionEvent.requestPermission === 'function';
+
+if (needsOrientPerm || needsMotionPerm) {
+// iOS 13+ requires explicit permission for both sensor types.
 const timeout = setTimeout(() => this.renderSetupButton(), this.config.permissionTimeout);
-const response = await DeviceOrientationEvent.requestPermission();
+
+let orientGranted = !needsOrientPerm;
+let motionGranted  = !needsMotionPerm;
+
+if (needsOrientPerm) {
+const r = await DeviceOrientationEvent.requestPermission();
+orientGranted = (r === 'granted');
+}
+if (needsMotionPerm) {
+const r = await DeviceMotionEvent.requestPermission();
+motionGranted = (r === 'granted');
+}
+
 clearTimeout(timeout);
-if (response === 'granted') this.enableSensors();
+
+if (orientGranted || motionGranted) {
+this.enableSensors(orientGranted, motionGranted);
 } else {
-this.enableSensors();
+this.renderSetupButton();
+}
+} else {
+// Android and all other browsers — sensors available implicitly.
+this.enableSensors(true, true);
 }
 } catch (e) {
-// Fallbacks remain active.
+// Fallbacks remain active on permission errors.
 }
 }
 
-enableSensors() {
+enableSensors(orientGranted = true, motionGranted = true) {
 if (this.state.sensorBound) return;
 
-// Flip / face-down detection
+// Flip / face-down detection (orientation permission).
+if (orientGranted) {
 this.boundOrientationHandler = this.handleOrientation.bind(this);
 window.addEventListener('deviceorientation', this.boundOrientationHandler, { passive: true });
+}
 
-// Shake detection
+// Shake detection (motion permission).
+if (motionGranted) {
 this.boundMotionHandler = this.handleMotion.bind(this);
 window.addEventListener('devicemotion', this.boundMotionHandler, { passive: true });
+}
+
+if (!orientGranted && !motionGranted) return;
 
 this.state.sensorBound = true;
 this.storage('spx_photon_motion_enabled', 'true');
@@ -339,9 +378,13 @@ document.addEventListener('touchmove',  cancelPress, { passive: true });
    UI & LIFECYCLE
 ---------------------------- */
 
-openCard(triggerMethod) {
+openCard(triggerMethod, uid) {
 if (Date.now() - this.state.lastCloseTime < this.config.cooldown) return;
 if (this.state.isActive || document.getElementById('spax-photon-card-overlay')) return;
+
+// Set the active user for this card display.
+const resolvedUid = (uid !== undefined && usersMap[uid]) ? Number(uid) : defaultUid;
+this.activeUid = resolvedUid;
 
 this.lastFocus = document.activeElement;
 this.state.isActive = true;
@@ -370,13 +413,13 @@ overlay.setAttribute('role', 'dialog');
 overlay.setAttribute('aria-modal', 'true');
 overlay.setAttribute('aria-label', 'Digital Business Card');
 
-const name    = this.esc(userData.name    || '');
-const title   = this.esc(userData.title   || '');
-const company = this.esc(userData.company || '');
+const name    = this.esc(this.d.name    || '');
+const title   = this.esc(this.d.title   || '');
+const company = this.esc(this.d.company || '');
 
 // Build contact detail rows
 const rows = [];
-const phones = Array.isArray(userData.phones) ? userData.phones : [];
+const phones = Array.isArray(this.d.phones) ? this.d.phones : [];
 
 phones.forEach(p => {
 if (!p || !p.number) return;
@@ -389,28 +432,28 @@ rows.push(`<div class="spax-photon-contact-row">
 </div>`);
 });
 
-if (userData.whatsapp) {
-const waNum   = this.sanPhone(userData.whatsapp).replace(/\D/g, '');
-const waLabel = this.esc(userData.whatsapp);
+if (this.d.whatsapp) {
+const waNum   = this.sanPhone(this.d.whatsapp).replace(/\D/g, '');
+const waLabel = this.esc(this.d.whatsapp);
 rows.push(`<div class="spax-photon-contact-row">
   <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F4AC;</span>
   <a href="https://wa.me/${encodeURIComponent(waNum)}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${waLabel}</a>
 </div>`);
 }
 
-if (userData.email) {
-const emailLabel = this.esc(userData.email);
-const emailHref  = this.escAttr(userData.email);
+if (this.d.email) {
+const emailLabel = this.esc(this.d.email);
+const emailHref  = this.escAttr(this.d.email);
 rows.push(`<div class="spax-photon-contact-row">
   <span class="spax-photon-contact-icon" aria-hidden="true">&#x2709;&#xFE0F;</span>
   <a href="mailto:${emailHref}" class="spax-photon-contact-text">${emailLabel}</a>
 </div>`);
 }
 
-if (userData.website) {
-const siteUrl = this.safeURL(userData.website);
+if (this.d.website) {
+const siteUrl = this.safeURL(this.d.website);
 if (siteUrl) {
-const siteLabel = this.esc(userData.website.replace(/^https?:\/\//, ''));
+const siteLabel = this.esc(this.d.website.replace(/^https?:\/\//, ''));
 rows.push(`<div class="spax-photon-contact-row">
   <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F310;</span>
   <a href="${siteUrl}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${siteLabel}</a>
@@ -418,7 +461,7 @@ rows.push(`<div class="spax-photon-contact-row">
 }
 }
 
-const addr = userData.address || {};
+const addr = this.d.address || {};
 const addrParts = [addr.street1, addr.street2, addr.city, addr.state, addr.postcode]
 .filter(p => p && String(p).trim());
 if (addrParts.length) {
@@ -432,13 +475,13 @@ rows.push(`<div class="spax-photon-contact-row">
 const canSendFile = this._canSendFile();
 const canShare    = this._canShare();
 
-const photoSrc = userData.photo ? this.safeURL(userData.photo) : '';
-const logoSrc  = userData.logo  ? this.safeURL(userData.logo)  : '';
+const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : '';
+const logoSrc  = this.d.logo  ? this.safeURL(this.d.logo)  : '';
 
 overlay.innerHTML = `
 <div class="spax-photon-card" role="region" aria-label="Business card details">
   <div class="spax-photon-card-header">
-    ${photoSrc ? `<img src="${photoSrc}" class="spax-photon-photo" alt="${name}" width="60" height="60" loading="eager" decoding="async" onerror="this.style.display='none'">` : ''}
+    ${photoSrc ? `<img src="${photoSrc}" class="spax-photon-photo" alt="${name}" width="60" height="60" loading="eager" decoding="async">` : ''}
     <div class="spax-photon-identity">
       ${name    ? `<div class="spax-photon-name">${name}</div>` : ''}
       ${title   ? `<div class="spax-photon-title">${title}</div>` : ''}
@@ -503,6 +546,12 @@ if (shareBtn) shareBtn.addEventListener('click', () => this.shareCard(),     { p
 if (saveBtn)  saveBtn.addEventListener( 'click', () => this.downloadVCard(), { passive: true });
 if (closeBtn) closeBtn.addEventListener('click', () => this.closeCard(),     { passive: true });
 
+// Hide broken Gravatar images without an inline onerror (CSP-safe).
+const photoEl = overlay.querySelector('.spax-photon-photo');
+if (photoEl) {
+photoEl.addEventListener('error', () => { photoEl.style.display = 'none'; }, { once: true });
+}
+
 overlay.addEventListener('click', (e) => {
 if (e.target === overlay) this.closeCard();
 });
@@ -539,7 +588,8 @@ this.lastFocus = null;
 }
 
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
+const defaultData   = usersMap[defaultUid] || {};
+if (!reducedMotion && !defaultData.noSensor && !this.isLowEndDevice()) {
 this.requestSensorAccess();
 }
 
@@ -553,8 +603,8 @@ this.releaseWakeLock();
 shareCard() {
 if (!this._canShare()) return;
 navigator.share({
-title: userData.name || 'Business Card',
-text:  `${userData.name || ''}${userData.title ? ' — ' + userData.title : ''}`.trim(),
+title: this.d.name || 'Business Card',
+text:  `${this.d.name || ''}${this.d.title ? ' — ' + this.d.title : ''}`.trim(),
 url:   window.location.href
 }).catch(() => {});
 }
@@ -562,13 +612,13 @@ url:   window.location.href
 async sendToDevice() {
 const vcard = this.generateVCard();
 const blob  = new Blob([vcard], { type: 'text/vcard' });
-const fname = (userData.name || 'contact').replace(/[^\w\-]+/g, '_');
+const fname = (this.d.name || 'contact').replace(/[^\w\-]+/g, '_');
 const file  = new File([blob], `${fname}.vcf`, { type: 'text/vcard' });
 
 try {
 await navigator.share({
 files: [file],
-title: userData.name || 'Contact Card'
+title: this.d.name || 'Contact Card'
 });
 } catch (e) {
 // AbortError = user cancelled — no fallback needed.
@@ -579,34 +629,33 @@ this.downloadVCard();
 }
 
 generateVCard() {
-const clean = s => String(s || '').replace(/[\r\n]/g, ' ').trim();
-const name    = clean(userData.name);
-const title   = clean(userData.title);
-const company = clean(userData.company);
-const email   = String(userData.email   || '').replace(/\s/g, '').trim();
-const website = String(userData.website || '').trim();
-const photo   = String(userData.photo   || '').trim();
-const phones  = Array.isArray(userData.phones) ? userData.phones : [];
-const whatsapp = String(userData.whatsapp || '').replace(/\s/g, '').trim();
-const addr     = userData.address || {};
-
-// Parse name for the N field (Last;First;;;).
-// Only split when the name has exactly one space (clear Western first/last).
-// For all other patterns (single word, multi-word, CJK, etc.) populate only FN.
-const parts     = name.split(' ');
-const lastName  = parts.length === 2 ? parts[1] : '';
-const firstName = parts.length === 2 ? parts[0] : '';
-const nField    = parts.length === 2 ? `N:${lastName};${firstName};;;` : `N:${name};;;;`;
+const clean   = s => String(s || '').replace(/[\r\n]/g, ' ').trim();
+const ve      = s => this.vcardEsc(s);
+const name    = clean(this.d.name);
+const title   = clean(this.d.title);
+const company = clean(this.d.company);
+const email   = String(this.d.email   || '').replace(/\s/g, '').trim();
+const website = String(this.d.website || '').trim();
+const photo   = String(this.d.photo   || '').trim();
+const phones  = Array.isArray(this.d.phones) ? this.d.phones : [];
+const whatsapp = String(this.d.whatsapp || '').replace(/\s/g, '').trim();
+const addr     = this.d.address || {};
 
 const lines = [
 'BEGIN:VCARD',
 'VERSION:3.0',
-`FN:${name}`,
-nField
+`FN:${ve(name)}`
 ];
 
-if (title)   lines.push(`TITLE:${title}`);
-if (company) lines.push(`ORG:${company}`);
+// N field: only emit for exactly "First Last" (two-space-separated tokens).
+// Omit entirely for single-word names, multi-word names, or CJK to avoid mis-ordering.
+const parts = name.split(' ');
+if (parts.length === 2) {
+lines.push(`N:${ve(parts[1])};${ve(parts[0])};;;`);
+}
+
+if (title)   lines.push(`TITLE:${ve(title)}`);
+if (company) lines.push(`ORG:${ve(company)}`);
 
 phones.forEach(p => {
 if (p && p.number) {
@@ -624,12 +673,12 @@ if (website) lines.push(`URL:${website}`);
 
 // ADR vCard 3.0 field order: PO-Box;Extended-Addr;Street;City;State;Postal;Country
 // s1 = street address line 1 (Street), s2 = line 2 (Extended, e.g. suite/apt).
-const s1 = String(addr.street1  || '').replace(/[;\r\n]/g, ' ').trim();
-const s2 = String(addr.street2  || '').replace(/[;\r\n]/g, ' ').trim();
-const ct = String(addr.city     || '').replace(/[;\r\n]/g, ' ').trim();
-const st = String(addr.state    || '').replace(/[;\r\n]/g, ' ').trim();
-const pc = String(addr.postcode || '').replace(/[;\r\n]/g, ' ').trim();
-const co = String(addr.country  || '').replace(/[;\r\n]/g, ' ').trim();
+const s1 = ve(String(addr.street1  || '').trim());
+const s2 = ve(String(addr.street2  || '').trim());
+const ct = ve(String(addr.city     || '').trim());
+const st = ve(String(addr.state    || '').trim());
+const pc = ve(String(addr.postcode || '').trim());
+const co = ve(String(addr.country  || '').trim());
 
 if (s1 || ct || st || co) {
 lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
@@ -653,7 +702,7 @@ const url   = URL.createObjectURL(blob);
 
 const a    = document.createElement('a');
 a.href     = url;
-a.download = `${(userData.name || 'contact').replace(/[^\w\-]+/g, '_')}.vcf`;
+a.download = `${(this.d.name || 'contact').replace(/[^\w\-]+/g, '_')}.vcf`;
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
@@ -756,6 +805,19 @@ if (!str) return '';
 const d = document.createElement('div');
 d.textContent = String(str);
 return d.innerHTML;
+}
+
+/**
+ * Escape a plain-text string for embedding in a vCard TEXT value.
+ * Per RFC 2426 §4, backslash, semicolon, comma, and newlines must be escaped.
+ */
+vcardEsc(str) {
+if (!str) return '';
+return String(str)
+.replace(/\\/g, '\\\\')
+.replace(/;/g, '\\;')
+.replace(/,/g, '\\,')
+.replace(/\r\n|\r|\n/g, '\\n');
 }
 
 /** Escape a string for safe use in an HTML attribute value. */

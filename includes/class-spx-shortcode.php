@@ -85,8 +85,10 @@ final class Shortcode {
 			return '';
 		}
 
-		// Enqueue card assets for this user (idempotent).
-		AssetLoader::enqueue_for_user( $user_id );
+		// Enqueue card assets for this user; bail silently when not permitted.
+		if ( ! AssetLoader::enqueue_for_user( $user_id ) ) {
+			return '';
+		}
 
 		$id_attr    = $atts['id'] ? ' id="' . esc_attr( $atts['id'] ) . '"' : '';
 		$class_attr = 'spax-photon-trigger-btn';
@@ -95,9 +97,10 @@ final class Shortcode {
 		}
 
 		return sprintf(
-			'<button type="button"%s class="%s" data-spx-vcard-trigger="1">%s</button>',
+			'<button type="button"%s class="%s" data-spx-vcard-trigger="1" data-spx-vcard-uid="%d">%s</button>',
 			$id_attr,
 			esc_attr( $class_attr ),
+			$user_id,
 			esc_html( $atts['text'] )
 		);
 	}
