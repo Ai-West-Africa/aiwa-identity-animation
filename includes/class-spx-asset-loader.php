@@ -252,7 +252,7 @@ final class AssetLoader {
 	 *
 	 * @param  \WP_User $user            The card owner.
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
-	 * @return array<string,mixed>       Sanitized card data for wp_localize_script.
+	 * @return array<string,mixed>       Sanitized card data for inline script injection via wp_add_inline_script.
 	 */
 	private static function build_card_data( \WP_User $user, bool $disable_sensors ): array {
 		$uid = (int) $user->ID;
