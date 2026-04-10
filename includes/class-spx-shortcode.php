@@ -68,13 +68,16 @@ final class Shortcode {
 		);
 
 		$user_id = (int) $atts['user_id'];
+		$post_id = 0;
+
+		$post = get_post();
+		if ( $post instanceof \WP_Post ) {
+			$post_id = (int) $post->ID;
+		}
 
 		// Resolve user: explicit → post author → logged-in user.
-		if ( $user_id <= 0 ) {
-			$post = get_post();
-			if ( $post instanceof \WP_Post && $post->post_author ) {
-				$user_id = (int) $post->post_author;
-			}
+		if ( $user_id <= 0 && $post instanceof \WP_Post && $post->post_author ) {
+			$user_id = (int) $post->post_author;
 		}
 
 		if ( $user_id <= 0 ) {
@@ -86,7 +89,9 @@ final class Shortcode {
 		}
 
 		// Enqueue card assets for this user; bail silently when not permitted.
-		if ( ! AssetLoader::enqueue_for_user( $user_id ) ) {
+		// Pass the resolved post ID so filter hooks (e.g. sparxstar_photon_vcard_disable_sensors)
+		// receive full context even when the shortcode is the only enqueue path.
+		if ( ! AssetLoader::enqueue_for_user( $user_id, $post_id ) ) {
 			return '';
 		}
 
