@@ -419,20 +419,36 @@ const company = this.esc(this.d.company || '');
 // Build contact detail rows
 const rows = [];
 const phones = Array.isArray(this.d.phones) ? this.d.phones : [];
+const toDigitsOnly = (value) => String(value || '').replace(/\D/g, '');
+const toTelHrefValue = (value) => {
+const raw = String(value || '').trim();
+if (!raw) return '';
+
+const extMatch = raw.match(/(?:ext\.?|x)\s*[:.]?\s*(\d+)$/i);
+const extension = extMatch ? extMatch[1] : '';
+const mainPart = extMatch ? raw.slice(0, extMatch.index).trim() : raw;
+const hasLeadingPlus = /^\s*\+/.test(mainPart);
+const digits = mainPart.replace(/\D/g, '');
+
+if (!digits) return '';
+
+return `${hasLeadingPlus ? '+' : ''}${digits}${extension ? `;ext=${extension}` : ''}`;
+};
 
 phones.forEach(p => {
 if (!p || !p.number) return;
-const icon  = p.type === 'FAX' ? '&#x1F4E0;' : (p.type === 'CELL' ? '&#x1F4F1;' : '&#x1F4DE;');
-const num   = this.escAttr(this.sanPhone(p.number));
-const label = this.esc(p.number);
+const icon    = p.type === 'FAX' ? '&#x1F4E0;' : (p.type === 'CELL' ? '&#x1F4F1;' : '&#x1F4DE;');
+const telHref = toTelHrefValue(p.number);
+if (!telHref) return;
+const label   = this.esc(p.number);
 rows.push(`<div class="spax-photon-contact-row">
   <span class="spax-photon-contact-icon" aria-hidden="true">${icon}</span>
-  <a href="tel:${num}" class="spax-photon-contact-text">${label}</a>
+  <a href="tel:${this.escAttr(telHref)}" class="spax-photon-contact-text">${label}</a>
 </div>`);
 });
 
 if (this.d.whatsapp) {
-const waNum   = this.sanPhone(this.d.whatsapp).replace(/\D/g, '');
+const waNum   = toDigitsOnly(this.d.whatsapp);
 const waLabel = this.esc(this.d.whatsapp);
 rows.push(`<div class="spax-photon-contact-row">
   <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F4AC;</span>

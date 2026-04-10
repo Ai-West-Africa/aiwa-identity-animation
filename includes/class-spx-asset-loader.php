@@ -82,44 +82,76 @@ final class AssetLoader {
 	}
 
 	/**
-	 * Automatic enqueue on singular pages.
+	 * Pre-enqueue card assets during wp_enqueue_scripts.
 	 *
-	 * When the page contains [spx_photon_vcard] shortcodes the user IDs are
-	 * resolved from the shortcode attributes and pre-enqueued here, during
-	 * the wp_enqueue_scripts action, so that the stylesheet always lands in
-	 * <head>.  The shortcode callback's enqueue_for_user() call is idempotent
-	 * and becomes a no-op for users already registered.
+	 * Scans every post in the current query ($wp_query->posts) so assets load
+	 * in <head> regardless of whether the shortcode appears on a singular page,
+	 * an archive, a block template, or any other view.  This solves the timing
+	 * problem where wp_enqueue_style() called from inside the_content (after
+	 * wp_head) cannot inject a <link> into the document head.
 	 *
-	 * For shortcode-free singular pages the post author's card is enqueued.
+	 * Behaviour per post:
+	 *   • Posts containing [spx_photon_vcard] — all referenced user IDs are
+	 *     extracted and enqueued.  The shortcode callback's enqueue_for_user()
+	 *     is idempotent and becomes a no-op for already-registered users.
+	 *   • Singular posts without the shortcode — the post author's card is
+	 *     enqueued when the post type is in the allowed list (filter below).
+	 *
+	 * Allowed post types for auto-author enqueue are controlled via the filter:
+	 *   apply_filters( 'sparxstar_photon_vcard_allowed_post_types', string[] )
+	 * Default: all public post types.  Pass an empty array to disable entirely.
 	 *
 	 * @return void
 	 */
 	public function enqueue_assets(): void {
-		if ( ! is_singular() ) {
+		global $wp_query;
+
+		if ( empty( $wp_query->posts ) || ! is_array( $wp_query->posts ) ) {
 			return;
 		}
 
-		$post_obj = get_queried_object();
-
-		if ( ! $post_obj instanceof \WP_Post ) {
-			return;
+		/**
+		 * Filter the post types for which the plugin auto-enqueues the post
+		 * author's business card when no shortcode is present in the content.
+		 *
+		 * @param string[] $post_types Allowed post type slugs. Default: all
+		 *                             registered public post types.
+		 */
+		static $default_post_types = null;
+		if ( null === $default_post_types ) {
+			$default_post_types = array_keys( get_post_types( [ 'public' => true ] ) );
 		}
 
-		// When the page contains [spx_photon_vcard] shortcodes, pre-enqueue
-		// all referenced users now so the stylesheet is in <head>.
-		if ( has_shortcode( $post_obj->post_content, 'spx_photon_vcard' ) ) {
-			foreach ( self::extract_shortcode_user_ids( $post_obj ) as $uid ) {
-				self::enqueue_for_user( $uid, $post_obj->ID );
+		$allowed_post_types = (array) apply_filters(
+			'sparxstar_photon_vcard_allowed_post_types',
+			$default_post_types
+		);
+
+		foreach ( $wp_query->posts as $post_obj ) {
+			if ( ! $post_obj instanceof \WP_Post ) {
+				continue;
 			}
-			return;
-		}
 
-		$author_id = (int) $post_obj->post_author;
-		if ( $author_id <= 0 ) {
-			return;
-		}
+			// Posts containing the shortcode: pre-enqueue all referenced users.
+			if ( has_shortcode( $post_obj->post_content, 'spx_photon_vcard' ) ) {
+				foreach ( self::extract_shortcode_user_ids( $post_obj ) as $uid ) {
+					self::enqueue_for_user( $uid, $post_obj->ID );
+				}
+				continue;
+			}
 
-		self::enqueue_for_user( $author_id, $post_obj->ID );
+			// On singular views only: auto-enqueue the post author when the
+			// post type is in the allowed list and there is no explicit shortcode.
+			if (
+				is_singular()
+				&& in_array( $post_obj->post_type, $allowed_post_types, true )
+			) {
+				$author_id = (int) $post_obj->post_author;
+				if ( $author_id > 0 ) {
+					self::enqueue_for_user( $author_id, $post_obj->ID );
+				}
+			}
+		}
 	}
 
 	/**
@@ -301,12 +333,18 @@ final class AssetLoader {
 	/**
 	 * Assemble the card data array for use in the JavaScript users map.
 	 *
-	 * Data is sourced from multiple layers, each enriching or overriding the
-	 * previous one.  Resolution order (lowest to highest precedence):
-	 *   1. WordPress core   — display_name, user_email, user_url
-	 *   2. ACF / SCF fields — spx_* custom business-card fields
-	 *   3. Gravatar         — profile photo via get_avatar_url()
-	 *   4. WooCommerce      — billing meta (name, company, email, phone, address)
+	 * Data is resolved per field using a "first non-empty value wins" strategy.
+	 * There is no single global precedence order applied uniformly to all fields;
+	 * each field has its own source priority.
+	 *
+	 * In practice the per-field priorities are:
+	 *   - Name, company, email, phone, address: WooCommerce billing meta is
+	 *     preferred when WooCommerce is active; ACF / SCF spx_* fields serve
+	 *     as the primary source otherwise; WordPress core (display_name,
+	 *     user_email, user_url) is the universal fallback.
+	 *   - Title, phones (CELL/WORK/FAX), WhatsApp, website: ACF / SCF
+	 *     spx_* fields when ACF is active; WordPress core otherwise.
+	 *   - Profile photo: Gravatar via get_avatar_url() (size 200, d=404) only.
 	 *
 	 * @param  \WP_User $user            The card owner.
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
