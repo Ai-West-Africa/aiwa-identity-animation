@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *     the card still has complete contact data on plain WordPress installs.
  *
  * @package Starisian\Sparxstar\Photon
- * @since   1.1.0
+ * @since   0.5.0
  */
 final class AcfFields {
 
