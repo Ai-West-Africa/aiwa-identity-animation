@@ -38,7 +38,6 @@ class SpxPhotonVCard {
 constructor() {
 this.config = {
 threshold: 145,           // beta (abs) for face-down flip trigger
-resetTime: 2500,          // tap sequence reset window (ms)
 cooldown: 5000,           // lockout after close (ms)
 stabilize: 150,           // stabilization window before registering flip (ms)
 longPress: 800,           // long-press duration (ms)
