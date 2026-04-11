@@ -855,12 +855,6 @@ return String(str)
 .replace(/>/g, '&gt;');
 }
 
-/** Allow only characters valid in a tel: URI. */
-sanPhone(num) {
-if (!num) return '';
-return String(num).replace(/[^0-9+\-().ext ]/gi, '');
-}
-
 safeURL(url) {
 if (!url) return '';
 try {
