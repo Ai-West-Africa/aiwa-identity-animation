@@ -38,7 +38,6 @@ class SpxPhotonVCard {
 constructor() {
 this.config = {
 threshold: 145,           // beta (abs) for face-down flip trigger
-resetTime: 2500,          // tap sequence reset window (ms)
 cooldown: 5000,           // lockout after close (ms)
 stabilize: 150,           // stabilization window before registering flip (ms)
 longPress: 800,           // long-press duration (ms)
@@ -476,10 +475,11 @@ rows.push(`<div class="spax-photon-contact-row">
 if (this.d.website) {
 const siteUrl = this.safeURL(this.d.website);
 if (siteUrl) {
+const siteHref  = this.escAttr(siteUrl);
 const siteLabel = this.esc(this.d.website.replace(/^https?:\/\//, ''));
 rows.push(`<div class="spax-photon-contact-row">
   <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F310;</span>
-  <a href="${siteUrl}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${siteLabel}</a>
+  <a href="${siteHref}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${siteLabel}</a>
 </div>`);
 }
 }
@@ -504,13 +504,13 @@ const logoSrc  = this.d.logo  ? this.safeURL(this.d.logo)  : '';
 overlay.innerHTML = `
 <div class="spax-photon-card" role="region" aria-label="Business card details">
   <div class="spax-photon-card-header">
-    ${photoSrc ? `<img src="${photoSrc}" class="spax-photon-photo" alt="${name}" width="60" height="60" loading="eager" decoding="async">` : ''}
+    ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spax-photon-photo" alt="${this.escAttr(this.d.name || '')}" width="60" height="60" loading="eager" decoding="async">` : ''}
     <div class="spax-photon-identity">
       ${name    ? `<div class="spax-photon-name">${name}</div>` : ''}
       ${title   ? `<div class="spax-photon-title">${title}</div>` : ''}
       ${company ? `<div class="spax-photon-company">${company}</div>` : ''}
     </div>
-    ${logoSrc ? `<img src="${logoSrc}" class="spax-photon-logo" alt="Logo" loading="lazy" decoding="async">` : ''}
+    ${logoSrc ? `<img src="${this.escAttr(logoSrc)}" class="spax-photon-logo" alt="Logo" loading="lazy" decoding="async">` : ''}
   </div>
   ${rows.length ? `<div class="spax-photon-divider" role="separator" aria-hidden="true"></div>
   <div class="spax-photon-contact-list">${rows.join('')}</div>` : ''}
@@ -853,12 +853,6 @@ return String(str)
 .replace(/'/g, '&#39;')
 .replace(/</g, '&lt;')
 .replace(/>/g, '&gt;');
-}
-
-/** Allow only characters valid in a tel: URI. */
-sanPhone(num) {
-if (!num) return '';
-return String(num).replace(/[^0-9+\-().ext ]/gi, '');
 }
 
 safeURL(url) {

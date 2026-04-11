@@ -504,13 +504,13 @@ const logoSrc  = this.d.logo  ? this.safeURL(this.d.logo)  : '';
 overlay.innerHTML = `
 <div class="spax-photon-card" role="region" aria-label="Business card details">
   <div class="spax-photon-card-header">
-    ${photoSrc ? `<img src="${photoSrc}" class="spax-photon-photo" alt="${name}" width="60" height="60" loading="eager" decoding="async">` : ''}
+    ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spax-photon-photo" alt="${this.escAttr(this.d.name || '')}" width="60" height="60" loading="eager" decoding="async">` : ''}
     <div class="spax-photon-identity">
       ${name    ? `<div class="spax-photon-name">${name}</div>` : ''}
       ${title   ? `<div class="spax-photon-title">${title}</div>` : ''}
       ${company ? `<div class="spax-photon-company">${company}</div>` : ''}
     </div>
-    ${logoSrc ? `<img src="${logoSrc}" class="spax-photon-logo" alt="Logo" loading="lazy" decoding="async">` : ''}
+    ${logoSrc ? `<img src="${this.escAttr(logoSrc)}" class="spax-photon-logo" alt="Logo" loading="lazy" decoding="async">` : ''}
   </div>
   ${rows.length ? `<div class="spax-photon-divider" role="separator" aria-hidden="true"></div>
   <div class="spax-photon-contact-list">${rows.join('')}</div>` : ''}
