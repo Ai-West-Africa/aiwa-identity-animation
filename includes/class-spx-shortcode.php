@@ -12,9 +12,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Shortcode: [spx_photon_vcard]
  *
  * Renders a button (or inline link) that opens the Photon digital business
- * card for the relevant user.  Placing this shortcode in any post, page, or
- * widget removes the need for the default floating "View Business Card"
- * button that is otherwise auto-injected.
+ * card for the relevant user. Placing this shortcode in post or page content
+ * removes the need for the default floating "View Business Card" button that
+ * is otherwise auto-injected. Reliable early asset loading is guaranteed only
+ * when the shortcode is present in content handled by the normal post query
+ * enqueue flow.
  *
  * Usage:
  *   [spx_photon_vcard]
