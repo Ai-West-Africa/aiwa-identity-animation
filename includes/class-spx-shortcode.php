@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *                      current post author, then the logged-in user.
  *
  * @package Starisian\Sparxstar\Photon
- * @since   1.1.0
+ * @since   0.5.0
  */
 final class Shortcode {
 
