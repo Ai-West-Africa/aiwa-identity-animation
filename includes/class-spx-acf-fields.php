@@ -23,6 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @package Starisian\Sparxstar\Photon
  * @since   0.5.0
+ * @version 0.5.0
  */
 final class AcfFields {
 
