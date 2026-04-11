@@ -356,15 +356,15 @@ The runtime emits custom DOM events without requiring analytics vendors.
 
 ### Events Dispatched
 
--   `vip-card-event`
+-   `spx-photon-card-event`
 
     -   type: `open`
 
-    -   method: `motion | shake | shortcode | touch | keyboard`
+    -   method: `button | flip | shake | shortcode | touch | keyboard`
 
     -   timestamp
 
--   `vip-card-event`
+-   `spx-photon-card-event`
 
     -   type: `close`
 
