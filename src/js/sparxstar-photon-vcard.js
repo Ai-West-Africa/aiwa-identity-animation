@@ -46,9 +46,10 @@ sensorFps: 10,            // throttle orientation events (fps)
 sensorAutoDisable: 30000, // battery saver — disable sensors after inactivity (ms)
 gammaThreshold: 25,       // max |gamma| for face-down detection (degrees)
 permissionTimeout: 2000,  // iOS permission promise timeout (ms)
-shakeThreshold: 18,       // m/s² magnitude delta triggering a shake count
+shakeThreshold: 324,      // squared m/s² magnitude delta triggering a shake count (18² — avoids sqrt)
 shakeRequired: 3,         // shake events required within the window
-shakeWindow: 1200         // ms window for shake sequence
+shakeWindow: 1200,        // ms window for shake sequence
+motionThrottle: 120       // minimum ms between processed motion events (~8 Hz, saves CPU/battery)
 };
 
 this.state = {
@@ -59,7 +60,8 @@ sensorBound: false,
 scrollPos: 0,
 shakeCount: 0,
 firstShakeTime: 0,
-lastMag: 0
+lastMagSq: 0,
+lastMotionTime: 0
 };
 
 this.timers = {
@@ -307,21 +309,27 @@ this.state.isFaceDown = false;
 }
 }
 
-/* Motion — shake detection */
+/* Motion — shake detection (throttled + sqrt-free for low-end/battery-constrained devices) */
 handleMotion(event) {
 if (this.state.isActive) return;
 if (!this.state.sensorBound) return;
+
+// Throttle: process at most ~8 Hz to avoid excessive CPU/battery use on low-end hardware.
+const now = Date.now();
+if (now - this.state.lastMotionTime < this.config.motionThrottle) return;
+this.state.lastMotionTime = now;
 
 this.resetSensorAutoDisable();
 const acc = event.accelerationIncludingGravity;
 if (!acc) return;
 
-const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
-const delta = Math.abs(mag - this.state.lastMag);
-this.state.lastMag = mag;
+// Compare squared magnitudes — avoids Math.sqrt() entirely.
+// shakeThreshold is expressed in squared m/s² units (default 324 = 18²).
+const magSq  = (acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2;
+const delta  = Math.abs(magSq - this.state.lastMagSq);
+this.state.lastMagSq = magSq;
 
 if (delta > this.config.shakeThreshold) {
-const now = Date.now();
 if (!this.state.firstShakeTime || (now - this.state.firstShakeTime > this.config.shakeWindow)) {
 this.state.shakeCount    = 1;
 this.state.firstShakeTime = now;
