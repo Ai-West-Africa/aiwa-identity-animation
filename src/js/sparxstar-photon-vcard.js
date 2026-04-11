@@ -475,10 +475,11 @@ rows.push(`<div class="spax-photon-contact-row">
 if (this.d.website) {
 const siteUrl = this.safeURL(this.d.website);
 if (siteUrl) {
+const siteHref  = this.escAttr(siteUrl);
 const siteLabel = this.esc(this.d.website.replace(/^https?:\/\//, ''));
 rows.push(`<div class="spax-photon-contact-row">
   <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F310;</span>
-  <a href="${siteUrl}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${siteLabel}</a>
+  <a href="${siteHref}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${siteLabel}</a>
 </div>`);
 }
 }
