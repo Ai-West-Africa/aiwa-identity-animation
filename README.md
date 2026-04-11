@@ -360,7 +360,7 @@ The runtime emits custom DOM events without requiring analytics vendors.
 
     -   type: `open`
 
-    -   method: `button | flip | shake | shortcode | touch | keyboard`
+    -   method: `button | shortcode | flip | shake`
 
     -   timestamp
 
