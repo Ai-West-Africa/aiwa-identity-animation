@@ -183,12 +183,15 @@ The overlay is styled as a dark-gradient business card:
 
 -   **Action buttons:**
 
-    -   **Download .vcf** — saves the vCard file to the device
+    -   **Send** — opens the device share flow for sending the contact from the overlay
 
-    -   **Send via AirDrop / Nearby Share** — invokes `navigator.share({ files: [vcf] })` (OS share sheet); falls back to download when the Web Share Files API is unavailable
+    -   **Share Link** — shares or copies the contact link, depending on platform support
 
-    -   **Enable Motion Trigger** — requests `DeviceOrientationEvent` and `DeviceMotionEvent` permissions (iOS 13+) so shake and flip triggers work
+    -   **Save Contact** — saves the vCard/contact to the device
 
+    -   **Close** — dismisses the overlay
+
+-   **Motion permission button:** `#spax-photon-sensor-grant` is a separate floating control labeled **Enable Motion Trigger** that requests `DeviceOrientationEvent` and `DeviceMotionEvent` permissions (iOS 13+) so shake and flip triggers work
 * * * * *
 
 Trigger Methods
