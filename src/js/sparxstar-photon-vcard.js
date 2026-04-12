@@ -687,12 +687,73 @@ lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
 }
 
 // Social media profiles
+// Map human-readable ACF labels (lowercased) → valid vCard token values.
+const socialMap = {
+'amazon music':   'AMAZON-MUSIC',
+'apple music':    'APPLE-MUSIC',
+'audiomack':      'AUDIOMACK',
+'baidu tieba':    'BAIDU-TIEBA',
+'bandcamp':       'BANDCAMP',
+'behance':        'BEHANCE',
+'bereal':         'BEREAL',
+'bilibili':       'BILIBILI',
+'bluesky':        'BLUESKY',
+'caffeine':       'CAFFEINE',
+'deezer':         'DEEZER',
+'discord':        'DISCORD',
+'douyin':         'DOUYIN',
+'dribbble':       'DRIBBBLE',
+'facebook':       'FACEBOOK',
+'flickr':         'FLICKR',
+'github':         'GITHUB',
+'instagram':      'INSTAGRAM',
+'kick':           'KICK',
+'kuaishou':       'KUAISHOU',
+'lemmy':          'LEMMY',
+'line':           'LINE',
+'linkedin':       'LINKEDIN',
+'mastodon':       'MASTODON',
+'medium':         'MEDIUM',
+'pandora':        'PANDORA',
+'pinterest':      'PINTEREST',
+'pixiv':          'PIXIV',
+'qq':             'QQ',
+'quora':          'QUORA',
+'reddit':         'REDDIT',
+'rumble':         'RUMBLE',
+'snapchat':       'SNAPCHAT',
+'soundcloud':     'SOUNDCLOUD',
+'spotify':        'SPOTIFY',
+'stack overflow': 'STACKOVERFLOW',
+'telegram':       'TELEGRAM',
+'threads':        'THREADS',
+'tidal':          'TIDAL',
+'tiktok':         'TIKTOK',
+'truth social':   'TRUTH-SOCIAL',
+'tumblr':         'TUMBLR',
+'twitch':         'TWITCH',
+'viber':          'VIBER',
+'vk':             'VK',
+'vsco':           'VSCO',
+'whatsapp':       'WHATSAPP',
+'wechat':         'WECHAT',
+'weibo':          'WEIBO',
+'xiaohongshu':    'XIAOHONGSHU',
+'x':              'X',
+'youtube':        'YOUTUBE',
+'youtube music':  'YOUTUBE-MUSIC',
+'zhihu':          'ZHIHU',
+};
 social.forEach(s => {
 if (s.val) {
 const safeVal = this.safeURL(s.val);
 if (safeVal) {
-lines.push(`X-SOCIALPROFILE;TYPE=${ve(clean(s.key))}:${safeVal}`);
-lines.push(`URL;TYPE=${ve(clean(s.key))}:${safeVal}`);
+const rawKey    = String(clean(s.key) || '').trim().toLowerCase();
+const socialType = socialMap[rawKey]
+|| rawKey.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+|| 'SOCIAL';
+lines.push(`X-SOCIALPROFILE;TYPE=${socialType}:${safeVal}`);
+lines.push(`URL:${safeVal}`);
 }
 }
 });
