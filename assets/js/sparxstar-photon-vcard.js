@@ -687,12 +687,12 @@ lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
 }
 
 // Social media profiles
-// Map human-readable ACF labels (lowercased) → valid vCard token values.
+// Map ACF slug values (snake_case) → valid vCard token values.
 const socialMap = {
-'amazon music':   'AMAZON-MUSIC',
-'apple music':    'APPLE-MUSIC',
+'amazon_music':   'AMAZON-MUSIC',
+'apple_music':    'APPLE-MUSIC',
 'audiomack':      'AUDIOMACK',
-'baidu tieba':    'BAIDU-TIEBA',
+'baidu_tieba':    'BAIDU-TIEBA',
 'bandcamp':       'BANDCAMP',
 'behance':        'BEHANCE',
 'bereal':         'BEREAL',
@@ -724,12 +724,12 @@ const socialMap = {
 'snapchat':       'SNAPCHAT',
 'soundcloud':     'SOUNDCLOUD',
 'spotify':        'SPOTIFY',
-'stack overflow': 'STACKOVERFLOW',
+'stack_overflow': 'STACKOVERFLOW',
 'telegram':       'TELEGRAM',
 'threads':        'THREADS',
 'tidal':          'TIDAL',
 'tiktok':         'TIKTOK',
-'truth social':   'TRUTH-SOCIAL',
+'truth_social':   'TRUTH-SOCIAL',
 'tumblr':         'TUMBLR',
 'twitch':         'TWITCH',
 'viber':          'VIBER',
@@ -741,7 +741,7 @@ const socialMap = {
 'xiaohongshu':    'XIAOHONGSHU',
 'x':              'X',
 'youtube':        'YOUTUBE',
-'youtube music':  'YOUTUBE-MUSIC',
+'youtube_music':  'YOUTUBE-MUSIC',
 'zhihu':          'ZHIHU',
 };
 social.forEach(s => {
