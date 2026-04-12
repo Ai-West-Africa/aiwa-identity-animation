@@ -137,7 +137,7 @@ setupMotion() {
 const isEnabled = this.storage('spx_photon_motion_enabled') === 'true';
 
 if (isEnabled) {
-document.addEventListener('touchstart', () => this.requestSensorAccess(), { once: true, passive: true });
+this.requestSensorAccess();
 } else {
 this.renderSetupButton();
 }
@@ -423,111 +423,69 @@ const name    = this.esc(this.d.name    || '');
 const title   = this.esc(this.d.title   || '');
 const company = this.esc(this.d.company || '');
 
-// Build contact detail rows
-const rows = [];
+// First phone (for the prominent link on the card face)
 const phones = Array.isArray(this.d.phones) ? this.d.phones : [];
-const toDigitsOnly = (value) => String(value || '').replace(/\D/g, '');
 const toTelHrefValue = (value) => {
 const raw = String(value || '').trim();
 if (!raw) return '';
-
 const extMatch = raw.match(/(?:ext\.?|x)\s*[:.]?\s*(\d+)$/i);
 const extension = extMatch ? extMatch[1] : '';
 const mainPart = extMatch ? raw.slice(0, extMatch.index).trim() : raw;
 const hasLeadingPlus = /^\s*\+/.test(mainPart);
 const digits = mainPart.replace(/\D/g, '');
-
 if (!digits) return '';
-
 return `${hasLeadingPlus ? '+' : ''}${digits}${extension ? `;ext=${extension}` : ''}`;
 };
 
-phones.forEach(p => {
-if (!p || !p.number) return;
-const icon    = p.type === 'FAX' ? '&#x1F4E0;' : (p.type === 'CELL' ? '&#x1F4F1;' : '&#x1F4DE;');
-const telHref = toTelHrefValue(p.number);
-if (!telHref) return;
-const label   = this.esc(p.number);
-rows.push(`<div class="spax-photon-contact-row">
-  <span class="spax-photon-contact-icon" aria-hidden="true">${icon}</span>
-  <a href="tel:${this.escAttr(telHref)}" class="spax-photon-contact-text">${label}</a>
-</div>`);
-});
-
-if (this.d.whatsapp) {
-const waNum   = toDigitsOnly(this.d.whatsapp);
-const waLabel = this.esc(this.d.whatsapp);
-rows.push(`<div class="spax-photon-contact-row">
-  <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F4AC;</span>
-  <a href="https://wa.me/${encodeURIComponent(waNum)}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${waLabel}</a>
-</div>`);
-}
-
-if (this.d.email) {
-const emailLabel = this.esc(this.d.email);
-const emailHref  = this.escAttr(this.d.email);
-rows.push(`<div class="spax-photon-contact-row">
-  <span class="spax-photon-contact-icon" aria-hidden="true">&#x2709;&#xFE0F;</span>
-  <a href="mailto:${emailHref}" class="spax-photon-contact-text">${emailLabel}</a>
-</div>`);
-}
-
-if (this.d.website) {
-const siteUrl = this.safeURL(this.d.website);
-if (siteUrl) {
-const siteHref  = this.escAttr(siteUrl);
-const siteLabel = this.esc(this.d.website.replace(/^https?:\/\//, ''));
-rows.push(`<div class="spax-photon-contact-row">
-  <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F310;</span>
-  <a href="${siteHref}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${siteLabel}</a>
-</div>`);
+let primaryPhoneHtml = '';
+if (phones.length) {
+const firstPhone = phones[0];
+const telHref = toTelHrefValue(firstPhone.number);
+if (telHref) {
+primaryPhoneHtml = `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}">${this.esc(firstPhone.number)}</a>`;
 }
 }
 
-const addr = this.d.address || {};
-const addrParts = [addr.street1, addr.street2, addr.city, addr.state, addr.postcode]
-.filter(p => p && String(p).trim());
-if (addrParts.length) {
-const addrLabel = addrParts.map(p => this.esc(p)).join(', ');
-rows.push(`<div class="spax-photon-contact-row">
-  <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F4CD;</span>
-  <span class="spax-photon-contact-text">${addrLabel}</span>
-</div>`);
-}
+const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : '';
 
 const canSendFile = this._canSendFile();
 const canShare    = this._canShare();
 
-const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : '';
-const logoSrc  = this.d.logo  ? this.safeURL(this.d.logo)  : '';
+// SVG icons for action bar
+const iconSave  = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+const iconShare = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
+const iconSend  = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+
+const sendLabel  = this.esc(this._sendButtonLabel());
 
 overlay.innerHTML = `
-<div class="spax-photon-card" role="region" aria-label="Business card details">
-  <div class="spax-photon-card-header">
-    ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spax-photon-photo" alt="${this.escAttr(this.d.name || '')}" width="60" height="60" loading="eager" decoding="async">` : ''}
-    <div class="spax-photon-identity">
-      ${name    ? `<div class="spax-photon-name">${name}</div>` : ''}
-      ${title   ? `<div class="spax-photon-title">${title}</div>` : ''}
-      ${company ? `<div class="spax-photon-company">${company}</div>` : ''}
+<button type="button" class="spax-photon-close" id="spax-photon-close-btn" aria-label="Close business card">&#x2715;</button>
+
+<div class="spx_vcard_page_wrapper">
+  <div class="spx_card_wrapper">
+    <div class="spx_card_content">
+      ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="56" height="56" loading="eager" decoding="async">` : ''}
+      <div id="spax-photon-qr" class="spx_qr_code" aria-label="QR code — scan to save contact"></div>
+      <span class="spx_scan_label" aria-hidden="true">Scan to save contact</span>
+      ${name    ? `<p class="spx_name">${name}</p>` : ''}
+      ${title   ? `<p class="spx_title">${title}</p>` : ''}
+      ${company ? `<p class="spx_company">${company}</p>` : ''}
+      ${primaryPhoneHtml}
     </div>
-    ${logoSrc ? `<img src="${this.escAttr(logoSrc)}" class="spax-photon-logo" alt="Logo" loading="lazy" decoding="async">` : ''}
   </div>
-  ${rows.length ? `<div class="spax-photon-divider" role="separator" aria-hidden="true"></div>
-  <div class="spax-photon-contact-list">${rows.join('')}</div>` : ''}
 </div>
 
-<div class="spax-photon-qr-wrap">
-  <div id="spax-photon-qr" class="spax-photon-qr" aria-label="QR code — scan to save contact"></div>
-  <span class="spax-photon-qr-label" aria-hidden="true">Scan to save contact</span>
+<div class="spx_action_bar" role="group" aria-label="Business card actions">
+  <div class="spx_action_grid">
+    ${canSendFile
+      ? `<button type="button" class="spx_action_item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}<span class="spx_action_label">${sendLabel}</span></button>`
+      : `<span class="spx_action_item" aria-hidden="true"></span>`}
+    ${canShare
+      ? `<button type="button" class="spx_action_item" id="spax-photon-share-btn" aria-label="Share Link">${iconShare}<span class="spx_action_label">Share</span></button>`
+      : `<span class="spx_action_item" aria-hidden="true"></span>`}
+    <button type="button" class="spx_action_item" id="spax-photon-save-btn" aria-label="Save Contact">${iconSave}<span class="spx_action_label">Save</span></button>
+  </div>
 </div>
-
-<div class="spax-photon-actions" role="group" aria-label="Business card actions">
-  ${canSendFile ? `<button type="button" class="spax-photon-btn spax-photon-btn--primary" id="spax-photon-send-btn">${this.esc(this._sendButtonLabel())}</button>` : ''}
-  ${canShare    ? `<button type="button" class="spax-photon-btn" id="spax-photon-share-btn">Share Link</button>` : ''}
-  <button type="button" class="spax-photon-btn" id="spax-photon-save-btn">Save Contact</button>
-</div>
-
-<button type="button" class="spax-photon-close" id="spax-photon-close-btn" aria-label="Close business card">Close</button>
 `;
 
 document.body.appendChild(overlay);
@@ -569,8 +527,8 @@ if (shareBtn) shareBtn.addEventListener('click', () => this.shareCard(),     { p
 if (saveBtn)  saveBtn.addEventListener( 'click', () => this.downloadVCard(), { passive: true });
 if (closeBtn) closeBtn.addEventListener('click', () => this.closeCard(),     { passive: true });
 
-// Hide broken Gravatar images without an inline onerror (CSP-safe).
-const photoEl = overlay.querySelector('.spax-photon-photo');
+// Hide broken profile image without an inline onerror (CSP-safe).
+const photoEl = overlay.querySelector('.spx_user_photo');
 if (photoEl) {
 photoEl.addEventListener('error', () => { photoEl.style.display = 'none'; }, { once: true });
 }
@@ -659,8 +617,9 @@ const company = clean(this.d.company);
 const email   = String(this.d.email   || '').replace(/\s/g, '').trim();
 const website = String(this.d.website || '').trim();
 const photo   = String(this.d.photo   || '').trim();
-const phones  = Array.isArray(this.d.phones) ? this.d.phones : [];
-const whatsapp = String(this.d.whatsapp || '').replace(/\s/g, '').trim();
+const phones  = Array.isArray(this.d.phones)   ? this.d.phones   : [];
+const channels = Array.isArray(this.d.channels) ? this.d.channels : [];
+const social   = Array.isArray(this.d.social)   ? this.d.social   : [];
 const addr     = this.d.address || {};
 
 const lines = [
@@ -670,7 +629,6 @@ const lines = [
 ];
 
 // N field: only emit for exactly "First Last" (two-space-separated tokens).
-// Omit entirely for single-word names, multi-word names, or CJK to avoid mis-ordering.
 const parts = name.split(' ');
 if (parts.length === 2) {
 lines.push(`N:${ve(parts[1])};${ve(parts[0])};;;`);
@@ -679,6 +637,7 @@ lines.push(`N:${ve(parts[1])};${ve(parts[0])};;;`);
 if (title)   lines.push(`TITLE:${ve(title)}`);
 if (company) lines.push(`ORG:${ve(company)}`);
 
+// Phone numbers from the repeater (phone-type channels)
 phones.forEach(p => {
 if (p && p.number) {
 const phoneValue = ve(String(p.number).replace(/\s+/g, ''));
@@ -686,17 +645,36 @@ lines.push(`TEL;TYPE=${(p.type || 'VOICE').toUpperCase()}:${phoneValue}`);
 }
 });
 
-if (whatsapp) {
-const whatsappValue = ve(String(whatsapp).replace(/\s+/g, ''));
-lines.push(`TEL;TYPE=CELL,VOICE:${whatsappValue}`);
-lines.push(`X-WHATSAPP:${whatsappValue}`);
+// Messaging / communications channels
+channels.forEach(c => {
+const cleanVal = ve(String(c.val || '').replace(/\s+/g, ''));
+if (!cleanVal) return;
+switch (c.key) {
+case 'whatsapp':
+lines.push(`TEL;TYPE=CELL,VOICE:${cleanVal}`);
+lines.push(`X-WHATSAPP:${cleanVal}`);
+break;
+case 'telegram':
+lines.push(`X-TELEGRAM:${cleanVal}`);
+break;
+case 'signal':
+lines.push(`X-SIGNAL:${cleanVal}`);
+break;
+case 'wechat':
+lines.push(`X-WECHAT:${cleanVal}`);
+break;
+case 'viber':
+lines.push(`X-VIBER:${cleanVal}`);
+break;
+default:
+lines.push(`X-${c.key.toUpperCase().replace(/[^A-Z0-9]/g, '')}:${cleanVal}`);
 }
+});
 
 if (email)   lines.push(`EMAIL:${email}`);
 if (website) lines.push(`URL:${website}`);
 
 // ADR vCard 3.0 field order: PO-Box;Extended-Addr;Street;City;State;Postal;Country
-// s1 = street address line 1 (Street), s2 = line 2 (Extended, e.g. suite/apt).
 const s1 = ve(String(addr.street1  || '').trim());
 const s2 = ve(String(addr.street2  || '').trim());
 const ct = ve(String(addr.city     || '').trim());
@@ -707,6 +685,17 @@ const co = ve(String(addr.country  || '').trim());
 if (s1 || s2 || ct || st || pc || co) {
 lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
 }
+
+// Social media profiles
+social.forEach(s => {
+if (s.val) {
+const safeVal = this.safeURL(s.val);
+if (safeVal) {
+lines.push(`X-SOCIALPROFILE;TYPE=${ve(clean(s.key))}:${safeVal}`);
+lines.push(`URL;TYPE=${ve(clean(s.key))}:${safeVal}`);
+}
+}
+});
 
 if (photo) {
 const safePhoto = this.safeURL(photo);
@@ -802,7 +791,11 @@ try { navigator.vibrate(pattern); } catch (e) {}
 }
 
 _canShare() {
+try {
 return !!(navigator.canShare && navigator.canShare({ text: 'x' }));
+} catch (e) {
+return false;
+}
 }
 
 _canSendFile() {
