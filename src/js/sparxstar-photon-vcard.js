@@ -920,6 +920,16 @@ return '';
 }
 
 function spx_photon_boot() {
+// Progressive enhancement: enable Houdini animation only when
+// CSS.registerProperty is available and the user is not data-saving.
+if (
+    typeof CSS !== 'undefined' &&
+    typeof CSS.registerProperty === 'function' &&
+    !( navigator.connection && navigator.connection.saveData )
+) {
+    document.documentElement.classList.add('spx-houdini');
+}
+
 window.spxPhotonVCard = new SpxPhotonVCard();
 }
 

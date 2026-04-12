@@ -89,14 +89,14 @@ animation: spx_rotate_simple 4s linear infinite;
 -webkit-transform: translateZ(0);
 }
 
-/* Modern upgrade: use the registered @property for smooth interpolation */
-@supports (background: paint(something)) {
-.spx_card_wrapper::before {
+/* Modern upgrade: use the registered @property for smooth interpolation.
+   Class is added by JS when CSS.registerProperty is available and
+   the user is not on a data-saving connection. */
+.spx-houdini .spx_card_wrapper::before {
     animation: spx_rotate_fancy 3s linear infinite;
     background: linear-gradient(var(--spx_rotate), #00f2ff, #0062ff 43%, #7000ff);
     width: 100%;
     height: 100%;
-}
 }
 
 /* ---- White inner card ---- */
