@@ -340,11 +340,10 @@ final class AssetLoader {
 	 *   - Phones:   ACF spx_rel_com_matrix repeater (phone-type channels).
 	 *   - Channels: ACF spx_rel_com_matrix repeater (messaging-type channels).
 	 *   - Social:   ACF spx_rel_social_matrix repeater.
-	 *   - Email:    WP user_email → WooCommerce billing_email.
+	 *   - Email:    WP user_email (canonical).
 	 *   - Website:  WP user_url.
 	 *   - Address:  ACF spx_loc_* fields.
 	 *   - Photo:    Gravatar via get_avatar_url() — only when spx_state_img_pub is truthy.
-	 *   - Logo:     ACF spx_img_brand_blob image field (returns array, extracts URL).
 	 *
 	 * @param  \WP_User $user            The card owner.
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
@@ -433,12 +432,6 @@ final class AssetLoader {
 
 		// ── Email ────────────────────────────────────────────────────────────────
 		$email = $user->user_email;
-		if ( class_exists( 'WooCommerce' ) ) {
-			$billing_email = (string) ( get_user_meta( $uid, 'billing_email', true ) ?: '' );
-			if ( '' !== $billing_email ) {
-				$email = $billing_email;
-			}
-		}
 
 		// ── Website (WP core user_url) ───────────────────────────────────────────
 		$website = $user->user_url ?: '';
@@ -477,15 +470,6 @@ final class AssetLoader {
 			);
 		}
 
-		// ── Business logo ────────────────────────────────────────────────────────
-		$logo = '';
-		if ( $acf ) {
-			$logo_img = get_field( 'spx_img_brand_blob', 'user_' . $uid );
-			if ( is_array( $logo_img ) && ! empty( $logo_img['url'] ) ) {
-				$logo = (string) $logo_img['url'];
-			}
-		}
-
 		return [
 			'name'     => sanitize_text_field( $name ),
 			'company'  => sanitize_text_field( $company ),
@@ -514,7 +498,6 @@ final class AssetLoader {
 			'email'    => sanitize_email( $email ),
 			'website'  => esc_url_raw( $website ),
 			'photo'    => esc_url_raw( $photo ),
-			'logo'     => esc_url_raw( $logo ),
 			'address'  => array_map( 'sanitize_text_field', $address ),
 			'noSensor' => (bool) $disable_sensors,
 		];
