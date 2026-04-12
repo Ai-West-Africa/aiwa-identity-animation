@@ -479,10 +479,10 @@ overlay.innerHTML = `
   <div class="spx_action_grid">
     ${canSendFile
       ? `<button type="button" class="spx_action_item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}<span class="spx_action_label">${sendLabel}</span></button>`
-      : `<span class="spx_action_item" aria-hidden="true"></span>`}
+      : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
     ${canShare
       ? `<button type="button" class="spx_action_item" id="spax-photon-share-btn" aria-label="Share Link">${iconShare}<span class="spx_action_label">Share</span></button>`
-      : `<span class="spx_action_item" aria-hidden="true"></span>`}
+      : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
     <button type="button" class="spx_action_item" id="spax-photon-save-btn" aria-label="Save Contact">${iconSave}<span class="spx_action_label">Save</span></button>
   </div>
 </div>

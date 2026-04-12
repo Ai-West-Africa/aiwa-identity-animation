@@ -213,6 +213,14 @@ outline-offset: 2px;
 border-radius: 4px;
 }
 
+.spx_action_placeholder {
+display: inline-flex;
+min-height: 44px;
+visibility: hidden;
+pointer-events: none;
+cursor: default;
+}
+
 /* ---- Close button (top-right of overlay) ---- */
 .spax-photon-close {
 position: absolute;
