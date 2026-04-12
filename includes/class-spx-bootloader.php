@@ -94,6 +94,10 @@ final class Bootloader {
 	/**
 	 * Write default options and activation transient for the current site.
 	 *
+	 * Also registers the PWA rewrite rules and flushes the rewrite cache so
+	 * /spx-pwa-manifest.json and /spx-pwa-sw.js resolve immediately after
+	 * activation without requiring a manual Settings → Permalinks save.
+	 *
 	 * @return void
 	 */
 	private static function activate_for_site(): void {
@@ -107,6 +111,13 @@ final class Bootloader {
 		);
 
 		set_transient( 'sparxstar_photon_vcard_activation_notice', true, 60 );
+
+		// Register PWA rewrite rules so flush_rewrite_rules captures them.
+		if ( ! class_exists( PwaController::class ) ) {
+			require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-pwa.php';
+		}
+		PwaController::register_rewrite_rules();
+		flush_rewrite_rules( false );
 	}
 
 	/**
@@ -127,6 +138,7 @@ final class Bootloader {
 				foreach ( $site_ids as $site_id ) {
 					switch_to_blog( (int) $site_id );
 					delete_transient( 'sparxstar_photon_vcard_activation_notice' );
+					flush_rewrite_rules( false );
 				}
 
 				restore_current_blog();
@@ -136,6 +148,7 @@ final class Bootloader {
 		}
 
 		delete_transient( 'sparxstar_photon_vcard_activation_notice' );
+		flush_rewrite_rules( false );
 	}
 
 	/**
@@ -174,10 +187,12 @@ final class Bootloader {
 		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-asset-loader.php';
 		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-acf-fields.php';
 		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-shortcode.php';
+		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-pwa.php';
 
 		AssetLoader::get_instance();
 		AcfFields::register();
 		Shortcode::register();
+		PwaController::register();
 	}
 
 	/**

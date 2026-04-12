@@ -63,6 +63,19 @@ final class AssetLoader {
 	private static array $localized_users = [];
 
 	/**
+	 * Check whether card assets have been enqueued for the given user ID.
+	 *
+	 * Used by PwaController to decide whether to inject the PWA manifest
+	 * link into the page head.
+	 *
+	 * @param  int  $user_id The user ID to check.
+	 * @return bool          True when the user's card is already enqueued.
+	 */
+	public static function has_card_enqueued( int $user_id ): bool {
+		return in_array( $user_id, self::$localized_users, true );
+	}
+
+	/**
 	 * Private constructor — registers the wp_enqueue_scripts hook.
 	 */
 	private function __construct() {
