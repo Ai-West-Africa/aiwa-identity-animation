@@ -172,7 +172,12 @@ final class Bootloader {
 		}
 
 		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-asset-loader.php';
+		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-acf-fields.php';
+		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-shortcode.php';
+
 		AssetLoader::get_instance();
+		AcfFields::register();
+		Shortcode::register();
 	}
 
 	/**

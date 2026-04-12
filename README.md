@@ -6,7 +6,7 @@ SPARXSTAR Photon VCard
 
 **Version:** 0.5.0
 **Status:** Production / Master Edition\
-**Scope:** Client-side runtime (inline JavaScript)
+**Scope:** WordPress plugin (PHP + client-side JavaScript)
 **Author** Starisian Technolog (Max Barrett)
 **License** Starisian Technologies Proprietary
 
@@ -21,17 +21,21 @@ Copyright (c) 2025 Starisian Technologies. All rights reserved.
 Overview
 --------
 
-The **SPARXSTAR Photon VCard** runtime provides a secure, accessible, and resilient digital business card overlay that can be triggered via:
+The **SPARXSTAR Photon VCard** plugin delivers a secure, accessible, and resilient digital business card overlay for WordPress/WooCommerce sites. It pulls contact data from ACF, WooCommerce billing fields, WordPress core, and Gravatar, then renders a polished card overlay that visitors can share as a `.vcf` file or transmit via AirDrop / Nearby Share.
 
--   Device motion (face-down double-flip)
+The card overlay can be triggered via:
 
--   Touch fallback (long-press)
+-   **Shortcode button** — place anywhere in content with `[spx_photon_vcard]`
 
--   Keyboard fallback (Shift + V)
+-   **Device shake** — 3 acceleration events > 18 m/s² within 1.2 s
+
+-   **Face-down flip** — single face-down orientation event (beta ≥ 145°)
+
+-   **Touch fallback** — long-press anywhere on the page
+
+-   **Keyboard fallback** — `Shift + V`
 
 The system is designed for **legacy hardware**, **high-latency networks**, **accessibility compliance**, and **enterprise deployment constraints**, including kiosk and private browsing environments.
-
-This JavaScript runtime is injected inline by WordPress PHP and intentionally avoids external dependencies, libraries, or build tooling.
 
 * * * * *
 
@@ -54,20 +58,160 @@ Design Principles
 
 * * * * *
 
+Shortcode
+---------
+
+Place the card trigger button anywhere in post/page content using the `[spx_photon_vcard]` shortcode.
+
+```
+[spx_photon_vcard]
+[spx_photon_vcard text="View My Card"]
+[spx_photon_vcard text="Share Contact" class="my-class" id="hero-card-btn"]
+[spx_photon_vcard user_id="42" text="Jane's Card"]
+```
+
+### Attributes
+
+| Attribute | Default | Description |
+|-----------|---------|-------------|
+| `text` | `"View My Card"` | Button label |
+| `class` | `""` | Extra CSS classes added to the button |
+| `id` | `""` | HTML `id` attribute on the button |
+| `user_id` | Explicit attribute, otherwise current post author, otherwise current logged-in user | WordPress user ID whose card data to display |
+
+### Behaviour
+
+-   The shortcode renders a `<button>` that opens the business card overlay for the specified user when clicked.
+
+-   If the target user's `spx_display_business_card` ACF toggle is **off**, or their role is not permitted, the shortcode returns **an empty string** — no button is rendered and no assets are enqueued.
+
+-   When any shortcode trigger is present on the page, the floating auto-injected button hides itself automatically to avoid duplication.
+
+-   Multiple shortcodes with different `user_id` values on the same page are fully supported — each user's card data is loaded independently.
+
+* * * * *
+
+Data Layer
+----------
+
+Card data is assembled in layers. Because this is a commercial plugin, different deployments will have different combinations of data sources installed. The resolver is designed for that reality: each layer enriches or overrides what the layer below provides.
+
+### Layer 1 — WordPress core (always available)
+
+Every WordPress installation provides the baseline: `display_name` (name), `user_email`, and `user_url`. These fields are always resolved and are the universal fallback for any field not supplied by a higher layer.
+
+### Layer 2 — ACF / SCF custom fields (when ACF or Secure Custom Fields is installed)
+
+ACF `spx_*` fields are the primary data source for dedicated business-card data. When ACF is active they take precedence over WP core for every field they cover:
+
+-   **Title** — `spx_title`
+-   **Phones** — `spx_mobile` (CELL), `spx_work_phone` (WORK), `spx_fax` (FAX)
+-   **WhatsApp** — `spx_whatsapp_phone`
+-   **Website** — `spx_website` (falls back to `user_url` when empty)
+-   **Display toggle** — `spx_display_business_card` (card is suppressed when false)
+-   **Company / address** — `spx_company`, `spx_address_1/2`, `spx_city`, `spx_state`, `spx_postcode`, `spx_country` (only registered and used when WooCommerce is absent)
+
+### Layer 3 — Gravatar (profile photo)
+
+The profile photo is fetched via WordPress's `get_avatar_url()` using the user's email hash (`size` 200, `default '404'`). The JS overlay hides the `<img>` element when the URL returns 404 (no Gravatar uploaded).
+
+### Layer 4 — WooCommerce billing meta (when WooCommerce is installed)
+
+When WooCommerce is present it contributes billing-specific data that is preferred over ACF fallback values for the fields it covers:
+
+-   **Name** — `billing_first_name` + `billing_last_name` (preferred over `display_name`)
+-   **Company** — `billing_company` (falls back to ACF `spx_company` when empty)
+-   **Email** — `billing_email` (overrides `user_email` when present)
+-   **Phone** — `billing_phone` (used as CELL fallback only when no ACF phone fields are set)
+-   **Address** — `billing_address_1/2`, `billing_city`, `billing_state`, `billing_postcode`, `billing_country` (replaces ACF address fields entirely when WooCommerce is installed)
+
+The enriched payload is localized to JavaScript as `window.SPX_PHOTON_VCARD_USERS[uid]`. When the plugin auto-enqueues for the current user (non-shortcode path), the default uid is also stored in `window.SPX_PHOTON_VCARD_DEFAULT`.
+
+Phone entries carry a `type` field (`CELL`, `WORK`, or `FAX`) that maps directly to the vCard `TEL;TYPE=` attribute and determines the icon displayed in the overlay.
+
+* * * * *
+
+ACF Field Groups
+----------------
+
+The plugin registers two ACF local field groups automatically — no manual field creation is required.
+
+### Base Group (always registered)
+
+| Field key | Label | Type |
+|-----------|-------|------|
+| `spx_title` | Job Title | Text |
+| `spx_work_phone` | Work Phone | Text (max 25 chars) |
+| `spx_mobile` | Mobile | Text (max 25 chars) |
+| `spx_fax` | Fax | Text (max 25 chars) |
+| `spx_whatsapp_phone` | WhatsApp | Text (max 25 chars) |
+| `spx_display_business_card` | Display Business Card | True/False |
+
+### Fallback Group (registered only when WooCommerce is absent)
+
+| Field key | Label | Type |
+|-----------|-------|------|
+| `spx_company` | Company | Text |
+| `spx_address_1` | Address Line 1 | Text |
+| `spx_address_2` | Address Line 2 | Text |
+| `spx_city` | City | Text |
+| `spx_state` | State / County | Text |
+| `spx_postcode` | Postcode / ZIP | Text |
+| `spx_country` | Country | Text |
+| `spx_website` | Website URL | URL |
+
+All fields are attached to the **User** post type and appear under the user profile in WP Admin.
+
+To show a user's card, set **Display Business Card** to `true` on their profile. When `false`, neither the floating button nor any shortcode button will render for that user.
+
+* * * * *
+
+Business Card UI
+----------------
+
+The overlay is styled as a dark-gradient business card:
+
+-   **Background:** `linear-gradient(145deg, #1c1c1e, #2c2c2e)`
+
+-   **Profile photo:** circular Gravatar (60 × 60 px) with CSP-safe `error` fallback
+
+-   **Identity block:** name, job title, company
+
+-   **Contact rows:** tap-to-call phone numbers, WhatsApp deep-link (`wa.me`), `mailto:` email, website, formatted address
+
+-   **QR section:** QR code encoding the full vCard 3.0 payload
+
+-   **Action buttons:**
+
+    -   **Send** — opens the device share flow for sending the contact from the overlay
+
+    -   **Share Link** — shares or copies the contact link, depending on platform support
+
+    -   **Save Contact** — saves the vCard/contact to the device
+
+    -   **Close** — dismisses the overlay
+
+-   **Motion permission button:** `#spax-photon-sensor-grant` is a separate floating control labeled **Enable Motion Trigger** that requests `DeviceOrientationEvent` and `DeviceMotionEvent` permissions (iOS 13+) so shake and flip triggers work
+* * * * *
+
 Trigger Methods
 ---------------
 
-### 1\. Motion Trigger (Primary)
+### 1\. Motion Triggers (Shake + Flip)
 
--   Activated by a **double face-down gesture**
+**Shake** (new):
 
--   Uses `deviceorientation` with:
+-   Three `devicemotion` acceleration-delta events > 18 m/s² within a 1.2 s window trigger the overlay
 
-    -   Noise stabilization
+-   Requires motion permission on iOS 13+ (requested via the "Enable Motion Trigger" button)
 
-    -   Angle thresholding
+**Flip** (refined):
 
-    -   Time-window validation
+-   A single face-down `deviceorientation` event with `beta ≥ 145°` triggers the overlay
+
+-   Stabilisation delay reduced; threshold lowered from 155° to 145°
+
+Both triggers share the same `requestSensorAccess()` / `enableSensors()` permission flow. On iOS 13+, both `DeviceOrientationEvent.requestPermission()` and `DeviceMotionEvent.requestPermission()` are called; each listener is registered only when its permission is granted.
 
 -   Automatically disabled when:
 
@@ -135,13 +279,15 @@ Security Model
 
 -   Only the following fields are exposed client-side:
 
-    -   Name
+    -   Name, job title, company
 
-    -   Title
+    -   Phone numbers (CELL, WORK, FAX), WhatsApp
 
-    -   Phone
+    -   Email, website
 
-    -   Email
+    -   Address (street, city, state, postcode, country)
+
+    -   Gravatar photo URL
 
     -   Logo URL
 
@@ -210,15 +356,15 @@ The runtime emits custom DOM events without requiring analytics vendors.
 
 ### Events Dispatched
 
--   `vip-card-event`
+-   `spx-photon-card-event`
 
     -   type: `open`
 
-    -   method: `motion | touch | keyboard`
+    -   method: `button | shortcode | flip | shake`
 
     -   timestamp
 
--   `vip-card-event`
+-   `spx-photon-card-event`
 
     -   type: `close`
 
@@ -284,13 +430,15 @@ What This Runtime Does NOT Do
 Intended Usage
 --------------
 
-This JavaScript runtime is intended to be:
+This plugin is intended to be:
 
--   Injected inline by WordPress
+-   Installed on WordPress / WooCommerce sites
 
--   Loaded only on authorized pages
+-   Loaded only on authorized pages (per-user `spx_display_business_card` toggle)
 
--   Used by authenticated users
+-   Available on rendered pages to site visitors and authenticated users; viewing the card is not authentication-gated by default
+
+-   Governed by server-side role permissions where enforced by the host site, configurable via the `sparxstar_photon_vcard_allowed_roles` filter
 
 -   Governed by server-side permissions
 

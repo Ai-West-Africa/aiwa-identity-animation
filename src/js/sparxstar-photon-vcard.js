@@ -2,12 +2,20 @@
  * SPARXSTAR Photon VCard — front-end runtime.
  *
  * Bootstrapped by WordPress via wp_enqueue_script.  Card data is injected
- * by wp_localize_script as window.SPX_PHOTON_VCARD.
+ * via wp_add_inline_script as window.SPX_PHOTON_VCARD_USERS / window.SPX_PHOTON_VCARD_DEFAULT.
  *
- * The module pattern passes window and document explicitly so that:
- *  – local references are resolvable at parse time (minifier-friendly),
- *  – the singleton instance is reachable at window.spxPhotonVCard for
- *    external scripts and browser-console debugging.
+ * Features:
+ *  – Motion triggers: single face-down flip (deviceorientation) OR shake (devicemotion)
+ *  – Keyboard trigger: Shift+V
+ *  – Long-press touch trigger
+ *  – [spx_photon_vcard] shortcode button support (data-spx-vcard-trigger)
+ *  – Business-card-styled overlay with Gravatar photo, full contact details
+ *  – QR code (vCard data encoded)
+ *  – Save Contact (.vcf download)
+ *  – Web Share API URL share
+ *  – Send to Device: Web Share API with .vcf file (AirDrop / Nearby Share)
+ *  – Wake lock while card is visible
+ *  – WCAG 2.1 focus trap + keyboard navigation
  *
  * @package Starisian\Sparxstar\Photon
  */
@@ -18,34 +26,41 @@
 if (window.__SPX_PHOTON_CARD_LOADED__) return;
 window.__SPX_PHOTON_CARD_LOADED__ = true;
 
-// 2) WordPress-provided data (via wp_localize_script → SPX_PHOTON_VCARD)
-// Expected shape: { name, title, phone, email, logo, noSensor? }
-const userData = (window.SPX_PHOTON_VCARD && typeof window.SPX_PHOTON_VCARD === 'object')
-? window.SPX_PHOTON_VCARD
+// 2) WordPress-provided per-user card data map (via wp_add_inline_script).
+// window.SPX_PHOTON_VCARD_USERS  — map of { [uid]: cardData }
+// window.SPX_PHOTON_VCARD_DEFAULT — UID of the default card (post author / first shortcode user)
+const usersMap  = (window.SPX_PHOTON_VCARD_USERS && typeof window.SPX_PHOTON_VCARD_USERS === 'object')
+? window.SPX_PHOTON_VCARD_USERS
 : {};
+const defaultUid = Number(window.SPX_PHOTON_VCARD_DEFAULT) || 0;
 
 class SpxPhotonVCard {
 constructor() {
 this.config = {
-threshold: 155,           // beta threshold for "flat/face-down" trigger
-resetTime: 2500,          // tap sequence reset window (ms)
+threshold: 145,           // beta (abs) for face-down flip trigger
 cooldown: 5000,           // lockout after close (ms)
-stabilize: 150,           // stabilization window (ms)
+stabilize: 150,           // stabilization window before registering flip (ms)
 longPress: 800,           // long-press duration (ms)
 sensorFps: 10,            // throttle orientation events (fps)
-sensorAutoDisable: 30000, // battery saver — disable after inactivity (ms)
-gammaThreshold: 20,       // max gamma for face-down detection (degrees)
-permissionTimeout: 2000   // iOS permission promise timeout (ms)
+sensorAutoDisable: 30000, // battery saver — disable sensors after inactivity (ms)
+gammaThreshold: 25,       // max |gamma| for face-down detection (degrees)
+permissionTimeout: 2000,  // iOS permission promise timeout (ms)
+shakeThreshold: 324,      // squared m/s² magnitude delta triggering a shake count (18² — avoids sqrt)
+shakeRequired: 3,         // shake events required within the window
+shakeWindow: 1200,        // ms window for shake sequence
+motionThrottle: 120       // minimum ms between processed motion events (~8 Hz, saves CPU/battery)
 };
 
 this.state = {
-taps: 0,
-lastTapTime: 0,
 lastCloseTime: 0,
 isFaceDown: false,
 isActive: false,
 sensorBound: false,
-scrollPos: 0
+scrollPos: 0,
+shakeCount: 0,
+firstShakeTime: 0,
+lastMagSq: 0,
+lastMotionTime: 0
 };
 
 this.timers = {
@@ -56,8 +71,11 @@ sensorAutoDisable: null
 };
 
 this.boundOrientationHandler = null;
-this.wakeLock = null;
+this.boundMotionHandler      = null;
+this.wakeLock  = null;
 this.lastFocus = null;
+// Active user for the current card display.
+this.activeUid = defaultUid;
 
 this.init();
 }
@@ -68,23 +86,28 @@ this.init();
 
 init() {
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const defaultData   = usersMap[defaultUid] || {};
 
-// Enable motion triggers only when:
-// – user has not opted in to reduced motion,
-// – the WP data layer has not disabled sensors, and
-// – the device is not flagged as low-end.
-if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
+if (!reducedMotion && !defaultData.noSensor && !this.isLowEndDevice()) {
 this.setupMotion();
 }
 
-// Release wake lock on page hide to prevent leaks on navigation/refresh.
 window.addEventListener('pagehide', () => this.releaseWakeLock());
 
-// Fallback triggers are always active.
 this.setupFallbacks();
 
-// Always render the direct open button so any visitor can open the card.
+// Attach click handlers to [spx_photon_vcard] shortcode buttons.
+this.setupShortcodeTriggers();
+
+// Render the floating open-button only when no shortcode triggers are present.
+if (!document.querySelector('[data-spx-vcard-trigger]')) {
 this.renderOpenButton();
+}
+}
+
+/** Returns the card data for the currently active user. */
+get d() {
+return usersMap[this.activeUid] || {};
 }
 
 isLowEndDevice() {
@@ -127,7 +150,8 @@ if (document.getElementById('spax-photon-sensor-grant')) return;
 const btn = document.createElement('button');
 btn.id = 'spax-photon-sensor-grant';
 btn.type = 'button';
-btn.textContent = 'Activate Card';
+btn.textContent = 'Enable Motion Trigger';
+btn.setAttribute('aria-label', 'Enable motion-based card trigger (flip or shake)');
 btn.addEventListener('click', () => {
 this.requestSensorAccess();
 btn.remove();
@@ -144,59 +168,96 @@ btn.id = 'spax-photon-open-btn';
 btn.type = 'button';
 btn.textContent = 'View Business Card';
 btn.setAttribute('aria-label', 'Open digital business card');
-btn.addEventListener('click', () => this.openCard('button'), { passive: true });
+btn.dataset.spxVcardUid = String(defaultUid);
+btn.addEventListener('click', () => this.openCard('button', defaultUid), { passive: true });
 
 document.body.appendChild(btn);
+}
+
+setupShortcodeTriggers() {
+const triggers = document.querySelectorAll('[data-spx-vcard-trigger]');
+triggers.forEach(el => {
+const uid = Number(el.dataset.spxVcardUid) || defaultUid;
+el.addEventListener('click', () => this.openCard('shortcode', uid), { passive: true });
+});
 }
 
 async requestSensorAccess() {
 if (this.state.sensorBound) return;
 
 try {
-if (typeof DeviceOrientationEvent !== 'undefined' &&
-typeof DeviceOrientationEvent.requestPermission === 'function') {
-// iOS 13+ permission model — apply a timeout in case the promise
-// never resolves (e.g. the dialog is dismissed without a choice).
+const needsOrientPerm = typeof DeviceOrientationEvent !== 'undefined' &&
+typeof DeviceOrientationEvent.requestPermission === 'function';
+const needsMotionPerm = typeof DeviceMotionEvent !== 'undefined' &&
+typeof DeviceMotionEvent.requestPermission === 'function';
+
+if (needsOrientPerm || needsMotionPerm) {
+// iOS 13+ requires explicit permission for both sensor types.
 const timeout = setTimeout(() => this.renderSetupButton(), this.config.permissionTimeout);
-const response = await DeviceOrientationEvent.requestPermission();
+
+let orientGranted = !needsOrientPerm;
+let motionGranted  = !needsMotionPerm;
+
+if (needsOrientPerm) {
+const r = await DeviceOrientationEvent.requestPermission();
+orientGranted = (r === 'granted');
+}
+if (needsMotionPerm) {
+const r = await DeviceMotionEvent.requestPermission();
+motionGranted = (r === 'granted');
+}
+
 clearTimeout(timeout);
-if (response === 'granted') this.enableSensors();
+
+if (orientGranted || motionGranted) {
+this.enableSensors(orientGranted, motionGranted);
 } else {
-// Android and all other browsers grant access implicitly.
-this.enableSensors();
+this.renderSetupButton();
+}
+} else {
+// Android and all other browsers — sensors available implicitly.
+this.enableSensors(true, true);
 }
 } catch (e) {
 // Fallbacks remain active on permission errors.
 }
 }
 
-enableSensors() {
+enableSensors(orientGranted = true, motionGranted = true) {
 if (this.state.sensorBound) return;
 
+// Flip / face-down detection (orientation permission).
+if (orientGranted) {
 this.boundOrientationHandler = this.handleOrientation.bind(this);
 window.addEventListener('deviceorientation', this.boundOrientationHandler, { passive: true });
+}
+
+// Shake detection (motion permission).
+if (motionGranted) {
+this.boundMotionHandler = this.handleMotion.bind(this);
+window.addEventListener('devicemotion', this.boundMotionHandler, { passive: true });
+}
+
+if (!orientGranted && !motionGranted) return;
 
 this.state.sensorBound = true;
 this.storage('spx_photon_motion_enabled', 'true');
 
-// Remove stale activation button (may exist if the permission timeout fired first).
 const grantBtn = document.getElementById('spax-photon-sensor-grant');
 if (grantBtn) grantBtn.remove();
 
-// Battery saver: auto-disable after the inactivity window.
 this.resetSensorAutoDisable();
-
 this.vibrate(40);
 }
 
 disableSensors(clearStorageFlag = true) {
 if (!this.state.sensorBound) return;
 window.removeEventListener('deviceorientation', this.boundOrientationHandler);
+if (this.boundMotionHandler) {
+window.removeEventListener('devicemotion', this.boundMotionHandler);
+}
 this.state.sensorBound = false;
 
-// Only clear the permission flag for user-initiated disables (openCard/closeCard).
-// Auto-disable (battery saver) passes false so the flag stays 'true' and the next
-// page load can auto-request on touchstart without showing the activation button.
 if (clearStorageFlag) {
 this.storage('spx_photon_motion_enabled', 'false');
 }
@@ -214,13 +275,13 @@ this.disableSensors(false);
 }, this.config.sensorAutoDisable);
 }
 
+/* Orientation — single face-down flip */
 handleOrientation(event) {
 if (this.state.isActive) return;
 if (!this.state.sensorBound) return;
 
 this.resetSensorAutoDisable();
 
-// Throttle to reduce CPU load on older devices.
 const now = Date.now();
 const minDelta = Math.floor(1000 / this.config.sensorFps);
 if (now - this.timers.sensorTick < minDelta) return;
@@ -228,14 +289,13 @@ this.timers.sensorTick = now;
 
 const beta  = Math.abs(event.beta  || 0);
 const gamma = Math.abs(event.gamma || 0);
-// Require low gamma to reduce false positives (pocket/walking/table).
 const isFlat = beta > this.config.threshold && gamma < this.config.gammaThreshold;
 
 if (isFlat && !this.state.isFaceDown) {
 if (!this.timers.stabilizer) {
 this.timers.stabilizer = setTimeout(() => {
 this.state.isFaceDown = true;
-this.registerGesture();
+this.openCard('flip');
 this.timers.stabilizer = null;
 }, this.config.stabilize);
 }
@@ -248,21 +308,38 @@ this.state.isFaceDown = false;
 }
 }
 
-registerGesture() {
+/* Motion — shake detection (throttled + sqrt-free for low-end/battery-constrained devices) */
+handleMotion(event) {
+if (this.state.isActive) return;
+if (!this.state.sensorBound) return;
+
+// Throttle: process at most ~8 Hz to avoid excessive CPU/battery use on low-end hardware.
 const now = Date.now();
+if (now - this.state.lastMotionTime < this.config.motionThrottle) return;
+this.state.lastMotionTime = now;
 
-if (now - this.state.lastTapTime > this.config.resetTime) {
-this.state.taps = 0;
+this.resetSensorAutoDisable();
+const acc = event.accelerationIncludingGravity;
+if (!acc) return;
+
+// Compare squared magnitudes — avoids Math.sqrt() entirely.
+// shakeThreshold is expressed in squared m/s² units (default 324 = 18²).
+const magSq  = (acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2;
+const delta  = Math.abs(magSq - this.state.lastMagSq);
+this.state.lastMagSq = magSq;
+
+if (delta > this.config.shakeThreshold) {
+if (!this.state.firstShakeTime || (now - this.state.firstShakeTime > this.config.shakeWindow)) {
+this.state.shakeCount    = 1;
+this.state.firstShakeTime = now;
+} else {
+this.state.shakeCount++;
+if (this.state.shakeCount >= this.config.shakeRequired) {
+this.state.shakeCount     = 0;
+this.state.firstShakeTime = 0;
+this.openCard('shake');
 }
-
-this.state.taps++;
-this.state.lastTapTime = now;
-
-this.vibrate(30);
-
-if (this.state.taps >= 2) {
-this.openCard('motion');
-this.state.taps = 0;
+}
 }
 }
 
@@ -271,7 +348,6 @@ this.state.taps = 0;
 ---------------------------- */
 
 setupFallbacks() {
-// Keyboard: Shift+V
 document.addEventListener('keydown', (e) => {
 if (this.state.isActive) return;
 if (e.shiftKey && (e.key === 'V' || e.key === 'v')) {
@@ -279,7 +355,6 @@ this.openCard('keyboard');
 }
 });
 
-// Touch: long press with scroll guard.
 let startY = 0;
 
 const startPress = () => {
@@ -309,32 +384,30 @@ document.addEventListener('touchmove',  cancelPress, { passive: true });
    UI & LIFECYCLE
 ---------------------------- */
 
-openCard(triggerMethod) {
+openCard(triggerMethod, uid) {
 if (Date.now() - this.state.lastCloseTime < this.config.cooldown) return;
 if (this.state.isActive || document.getElementById('spax-photon-card-overlay')) return;
 
-// Save current focus for accessibility restoration on close.
-this.lastFocus = document.activeElement;
+// Set the active user for this card display.
+const resolvedUid = (uid !== undefined && usersMap[uid]) ? Number(uid) : defaultUid;
+this.activeUid = resolvedUid;
 
+this.lastFocus = document.activeElement;
 this.state.isActive = true;
 this.disableSensors();
 
-// Hide the open button while the card is visible.
 const openBtn = document.getElementById('spax-photon-open-btn');
 if (openBtn) openBtn.hidden = true;
 
-// iOS safe scroll lock (CSS expects body.spax-photon-card-active + fixed).
 this.state.scrollPos = window.scrollY;
 document.body.style.top = `-${this.state.scrollPos}px`;
 document.body.classList.add('spax-photon-card-active');
 
-// Analytics hook — external listeners can subscribe via document.
 document.dispatchEvent(new CustomEvent('spx-photon-card-event', {
 detail: { type: 'open', method: triggerMethod, timestamp: Date.now() }
 }));
 
 this.vibrate([80, 50, 80]);
-
 this.injectOverlay();
 this.keepScreenAwake();
 }
@@ -342,24 +415,119 @@ this.keepScreenAwake();
 injectOverlay() {
 const overlay = document.createElement('div');
 overlay.id = 'spax-photon-card-overlay';
-
 overlay.setAttribute('role', 'dialog');
 overlay.setAttribute('aria-modal', 'true');
 overlay.setAttribute('aria-label', 'Digital Business Card');
 
+const name    = this.esc(this.d.name    || '');
+const title   = this.esc(this.d.title   || '');
+const company = this.esc(this.d.company || '');
+
+// Build contact detail rows
+const rows = [];
+const phones = Array.isArray(this.d.phones) ? this.d.phones : [];
+const toDigitsOnly = (value) => String(value || '').replace(/\D/g, '');
+const toTelHrefValue = (value) => {
+const raw = String(value || '').trim();
+if (!raw) return '';
+
+const extMatch = raw.match(/(?:ext\.?|x)\s*[:.]?\s*(\d+)$/i);
+const extension = extMatch ? extMatch[1] : '';
+const mainPart = extMatch ? raw.slice(0, extMatch.index).trim() : raw;
+const hasLeadingPlus = /^\s*\+/.test(mainPart);
+const digits = mainPart.replace(/\D/g, '');
+
+if (!digits) return '';
+
+return `${hasLeadingPlus ? '+' : ''}${digits}${extension ? `;ext=${extension}` : ''}`;
+};
+
+phones.forEach(p => {
+if (!p || !p.number) return;
+const icon    = p.type === 'FAX' ? '&#x1F4E0;' : (p.type === 'CELL' ? '&#x1F4F1;' : '&#x1F4DE;');
+const telHref = toTelHrefValue(p.number);
+if (!telHref) return;
+const label   = this.esc(p.number);
+rows.push(`<div class="spax-photon-contact-row">
+  <span class="spax-photon-contact-icon" aria-hidden="true">${icon}</span>
+  <a href="tel:${this.escAttr(telHref)}" class="spax-photon-contact-text">${label}</a>
+</div>`);
+});
+
+if (this.d.whatsapp) {
+const waNum   = toDigitsOnly(this.d.whatsapp);
+const waLabel = this.esc(this.d.whatsapp);
+rows.push(`<div class="spax-photon-contact-row">
+  <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F4AC;</span>
+  <a href="https://wa.me/${encodeURIComponent(waNum)}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${waLabel}</a>
+</div>`);
+}
+
+if (this.d.email) {
+const emailLabel = this.esc(this.d.email);
+const emailHref  = this.escAttr(this.d.email);
+rows.push(`<div class="spax-photon-contact-row">
+  <span class="spax-photon-contact-icon" aria-hidden="true">&#x2709;&#xFE0F;</span>
+  <a href="mailto:${emailHref}" class="spax-photon-contact-text">${emailLabel}</a>
+</div>`);
+}
+
+if (this.d.website) {
+const siteUrl = this.safeURL(this.d.website);
+if (siteUrl) {
+const siteHref  = this.escAttr(siteUrl);
+const siteLabel = this.esc(this.d.website.replace(/^https?:\/\//, ''));
+rows.push(`<div class="spax-photon-contact-row">
+  <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F310;</span>
+  <a href="${siteHref}" class="spax-photon-contact-text" target="_blank" rel="noopener noreferrer">${siteLabel}</a>
+</div>`);
+}
+}
+
+const addr = this.d.address || {};
+const addrParts = [addr.street1, addr.street2, addr.city, addr.state, addr.postcode]
+.filter(p => p && String(p).trim());
+if (addrParts.length) {
+const addrLabel = addrParts.map(p => this.esc(p)).join(', ');
+rows.push(`<div class="spax-photon-contact-row">
+  <span class="spax-photon-contact-icon" aria-hidden="true">&#x1F4CD;</span>
+  <span class="spax-photon-contact-text">${addrLabel}</span>
+</div>`);
+}
+
+const canSendFile = this._canSendFile();
+const canShare    = this._canShare();
+
+const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : '';
+const logoSrc  = this.d.logo  ? this.safeURL(this.d.logo)  : '';
+
 overlay.innerHTML = `
-${userData.logo ? `<img src="${this.safeURL(userData.logo)}" class="spax-photon-logo" alt="Business Logo" loading="lazy" decoding="async">` : ''}
-<div class="spax-photon-name">${this.esc(userData.name)}</div>
-<div class="spax-photon-title">${this.esc(userData.title)}</div>
-
-<div id="spax-photon-qr" class="spax-photon-qr" aria-label="Scan to save contact"></div>
-
-<div class="spax-photon-actions" role="group" aria-label="Business card actions">
-${this._canShare() ? `<button type="button" class="spax-photon-btn" id="spax-photon-share-btn">Share</button>` : ''}
-<button type="button" class="spax-photon-btn" id="spax-photon-save-btn">Save Contact</button>
+<div class="spax-photon-card" role="region" aria-label="Business card details">
+  <div class="spax-photon-card-header">
+    ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spax-photon-photo" alt="${this.escAttr(this.d.name || '')}" width="60" height="60" loading="eager" decoding="async">` : ''}
+    <div class="spax-photon-identity">
+      ${name    ? `<div class="spax-photon-name">${name}</div>` : ''}
+      ${title   ? `<div class="spax-photon-title">${title}</div>` : ''}
+      ${company ? `<div class="spax-photon-company">${company}</div>` : ''}
+    </div>
+    ${logoSrc ? `<img src="${this.escAttr(logoSrc)}" class="spax-photon-logo" alt="Logo" loading="lazy" decoding="async">` : ''}
+  </div>
+  ${rows.length ? `<div class="spax-photon-divider" role="separator" aria-hidden="true"></div>
+  <div class="spax-photon-contact-list">${rows.join('')}</div>` : ''}
 </div>
 
-<button type="button" class="spax-photon-close" id="spax-photon-close-btn" aria-label="Close Card">Close</button>
+<div class="spax-photon-qr-wrap">
+  <div id="spax-photon-qr" class="spax-photon-qr" aria-label="QR code — scan to save contact"></div>
+  <span class="spax-photon-qr-label" aria-hidden="true">Scan to save contact</span>
+</div>
+
+<div class="spax-photon-actions" role="group" aria-label="Business card actions">
+  ${canSendFile ? `<button type="button" class="spax-photon-btn spax-photon-btn--primary" id="spax-photon-send-btn">${this.esc(this._sendButtonLabel())}</button>` : ''}
+  ${canShare    ? `<button type="button" class="spax-photon-btn" id="spax-photon-share-btn">Share Link</button>` : ''}
+  <button type="button" class="spax-photon-btn" id="spax-photon-save-btn">Save Contact</button>
+</div>
+
+<button type="button" class="spax-photon-close" id="spax-photon-close-btn" aria-label="Close business card">Close</button>
 `;
 
 document.body.appendChild(overlay);
@@ -370,10 +538,8 @@ const closeBtn  = document.getElementById('spax-photon-close-btn');
 this.renderVCardQR();
 this.attachOverlayActions();
 
-// Set initial focus to close button.
 setTimeout(() => closeBtn && closeBtn.focus(), 50);
 
-// Key handling: Escape + focus trap.
 overlay.addEventListener('keydown', (e) => {
 if (e.key === 'Escape') {
 this.closeCard();
@@ -382,33 +548,33 @@ return;
 if (e.key === 'Tab' && focusable.length) {
 const first = focusable[0];
 const last  = focusable[focusable.length - 1];
-
 if (e.shiftKey) {
-if (document.activeElement === first) {
-e.preventDefault();
-last.focus();
-}
+if (document.activeElement === first) { e.preventDefault(); last.focus(); }
 } else {
-if (document.activeElement === last) {
-e.preventDefault();
-first.focus();
-}
+if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
 }
 }
 });
 }
 
 attachOverlayActions() {
+const sendBtn  = document.getElementById('spax-photon-send-btn');
 const shareBtn = document.getElementById('spax-photon-share-btn');
 const saveBtn  = document.getElementById('spax-photon-save-btn');
 const closeBtn = document.getElementById('spax-photon-close-btn');
 const overlay  = document.getElementById('spax-photon-card-overlay');
 
+if (sendBtn)  sendBtn.addEventListener( 'click', () => this.sendToDevice(),  { passive: true });
 if (shareBtn) shareBtn.addEventListener('click', () => this.shareCard(),     { passive: true });
 if (saveBtn)  saveBtn.addEventListener( 'click', () => this.downloadVCard(), { passive: true });
 if (closeBtn) closeBtn.addEventListener('click', () => this.closeCard(),     { passive: true });
 
-// Close when tapping the backdrop (not when tapping inside content).
+// Hide broken Gravatar images without an inline onerror (CSP-safe).
+const photoEl = overlay.querySelector('.spax-photon-photo');
+if (photoEl) {
+photoEl.addEventListener('error', () => { photoEl.style.display = 'none'; }, { once: true });
+}
+
 overlay.addEventListener('click', (e) => {
 if (e.target === overlay) this.closeCard();
 });
@@ -419,18 +585,13 @@ const overlay = document.getElementById('spax-photon-card-overlay');
 if (!overlay) return;
 
 document.body.classList.remove('spax-photon-card-active');
-
-// Restore scroll position.
 document.body.style.top = '';
 window.scrollTo(0, this.state.scrollPos);
 
 this.state.isActive      = false;
 this.state.lastCloseTime = Date.now();
-// Reset motion state to prevent immediate re-open.
-this.state.isFaceDown = false;
-this.state.taps       = 0;
+this.state.isFaceDown    = false;
 
-// Clear pending timers to avoid memory leaks.
 if (this.timers.stabilizer) { clearTimeout(this.timers.stabilizer); this.timers.stabilizer = null; }
 if (this.timers.longPress)  { clearTimeout(this.timers.longPress);  this.timers.longPress  = null; }
 
@@ -440,19 +601,17 @@ detail: { type: 'close', timestamp: Date.now() }
 
 overlay.remove();
 
-// Restore the open button.
 const openBtn = document.getElementById('spax-photon-open-btn');
 if (openBtn) openBtn.hidden = false;
 
-// Restore focus for accessibility.
 if (this.lastFocus) {
 this.lastFocus.focus();
 this.lastFocus = null;
 }
 
-// Re-request sensor access (iOS requires a user-gesture re-grant after disable).
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-if (!reducedMotion && !userData.noSensor && !this.isLowEndDevice()) {
+const defaultData   = usersMap[defaultUid] || {};
+if (!reducedMotion && !defaultData.noSensor && !this.isLowEndDevice()) {
 this.requestSensorAccess();
 }
 
@@ -466,29 +625,98 @@ this.releaseWakeLock();
 shareCard() {
 if (!this._canShare()) return;
 navigator.share({
-title: userData.name || 'Business Card',
-text:  `${userData.name || ''}${userData.title ? ' - ' + userData.title : ''}`.trim(),
+title: this.d.name || 'Business Card',
+text:  `${this.d.name || ''}${this.d.title ? ' — ' + this.d.title : ''}`.trim(),
 url:   window.location.href
 }).catch(() => {});
 }
 
-generateVCard() {
-const name  = (userData.name  || '').replace(/\n/g, ' ').trim();
-const title = (userData.title || '').replace(/\n/g, ' ').trim();
-const tel   = (userData.phone || '').replace(/\s+/g, ' ').trim();
-const email = (userData.email || '').replace(/\s+/g, '').trim();
-const url   = window.location.href;
+async sendToDevice() {
+const vcard = this.generateVCard();
+const blob  = new Blob([vcard], { type: 'text/vcard' });
+const fname = (this.d.name || 'contact').replace(/[^\w\-]+/g, '_');
+const file  = new File([blob], `${fname}.vcf`, { type: 'text/vcard' });
 
-return [
+try {
+await navigator.share({
+files: [file],
+title: this.d.name || 'Contact Card'
+});
+} catch (e) {
+// AbortError = user cancelled — no fallback needed.
+if (e && e.name !== 'AbortError') {
+this.downloadVCard();
+}
+}
+}
+
+generateVCard() {
+const clean   = s => String(s || '').replace(/[\r\n]/g, ' ').trim();
+const ve      = s => this.vcardEsc(s);
+const name    = clean(this.d.name);
+const title   = clean(this.d.title);
+const company = clean(this.d.company);
+const email   = String(this.d.email   || '').replace(/\s/g, '').trim();
+const website = String(this.d.website || '').trim();
+const photo   = String(this.d.photo   || '').trim();
+const phones  = Array.isArray(this.d.phones) ? this.d.phones : [];
+const whatsapp = String(this.d.whatsapp || '').replace(/\s/g, '').trim();
+const addr     = this.d.address || {};
+
+const lines = [
 'BEGIN:VCARD',
 'VERSION:3.0',
-`FN:${name}`,
-title ? `TITLE:${title}` : '',
-tel   ? `TEL;TYPE=CELL:${tel}` : '',
-email ? `EMAIL:${email}` : '',
-url   ? `URL:${url}` : '',
-'END:VCARD'
-].filter(Boolean).join('\n');
+`FN:${ve(name)}`
+];
+
+// N field: only emit for exactly "First Last" (two-space-separated tokens).
+// Omit entirely for single-word names, multi-word names, or CJK to avoid mis-ordering.
+const parts = name.split(' ');
+if (parts.length === 2) {
+lines.push(`N:${ve(parts[1])};${ve(parts[0])};;;`);
+}
+
+if (title)   lines.push(`TITLE:${ve(title)}`);
+if (company) lines.push(`ORG:${ve(company)}`);
+
+phones.forEach(p => {
+if (p && p.number) {
+const phoneValue = ve(String(p.number).replace(/\s+/g, ''));
+lines.push(`TEL;TYPE=${(p.type || 'VOICE').toUpperCase()}:${phoneValue}`);
+}
+});
+
+if (whatsapp) {
+const whatsappValue = ve(String(whatsapp).replace(/\s+/g, ''));
+lines.push(`TEL;TYPE=CELL,VOICE:${whatsappValue}`);
+lines.push(`X-WHATSAPP:${whatsappValue}`);
+}
+
+if (email)   lines.push(`EMAIL:${email}`);
+if (website) lines.push(`URL:${website}`);
+
+// ADR vCard 3.0 field order: PO-Box;Extended-Addr;Street;City;State;Postal;Country
+// s1 = street address line 1 (Street), s2 = line 2 (Extended, e.g. suite/apt).
+const s1 = ve(String(addr.street1  || '').trim());
+const s2 = ve(String(addr.street2  || '').trim());
+const ct = ve(String(addr.city     || '').trim());
+const st = ve(String(addr.state    || '').trim());
+const pc = ve(String(addr.postcode || '').trim());
+const co = ve(String(addr.country  || '').trim());
+
+if (s1 || s2 || ct || st || pc || co) {
+lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
+}
+
+if (photo) {
+const safePhoto = this.safeURL(photo);
+if (safePhoto) lines.push(`PHOTO;VALUE=URI:${safePhoto}`);
+}
+
+lines.push(`REV:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+lines.push('END:VCARD');
+
+return lines.join('\r\n');
 }
 
 downloadVCard() {
@@ -496,9 +724,9 @@ const vcard = this.generateVCard();
 const blob  = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
 const url   = URL.createObjectURL(blob);
 
-const a      = document.createElement('a');
-a.href       = url;
-a.download   = `${(userData.name || 'contact').replace(/[^\w\-]+/g, '_')}.vcf`;
+const a    = document.createElement('a');
+a.href     = url;
+a.download = `${(this.d.name || 'contact').replace(/[^\w\-]+/g, '_')}.vcf`;
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
@@ -515,8 +743,8 @@ container.innerHTML = '';
 // eslint-disable-next-line no-undef
 new QRCode(container, {
 text: this.generateVCard(),
-width: 220,
-height: 220,
+width: 176,
+height: 176,
 correctLevel: QRCode.CorrectLevel.M
 });
 });
@@ -538,31 +766,24 @@ async keepScreenAwake() {
 if (!('wakeLock' in navigator)) return;
 
 try {
-// eslint-disable-next-line no-undef
 this.wakeLock = await navigator.wakeLock.request('screen');
 
 this._onVisChange = async () => {
 if (!this.state.isActive) return;
 if (document.visibilityState === 'visible' && !this.wakeLock) {
 try {
-// eslint-disable-next-line no-undef
 this.wakeLock = await navigator.wakeLock.request('screen');
 } catch (e) {}
 }
 };
 
 document.addEventListener('visibilitychange', this._onVisChange);
-} catch (e) {
-// Ignore — wake lock is a best-effort optimisation.
-}
+} catch (e) {}
 }
 
 releaseWakeLock() {
 try {
-if (this.wakeLock) {
-this.wakeLock.release();
-this.wakeLock = null;
-}
+if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
 } catch (e) {}
 if (this._onVisChange) {
 document.removeEventListener('visibilitychange', this._onVisChange);
@@ -584,11 +805,54 @@ _canShare() {
 return !!(navigator.canShare && navigator.canShare({ text: 'x' }));
 }
 
+_canSendFile() {
+if (!navigator.canShare) return false;
+try {
+const b = new Blob(['test'], { type: 'text/vcard' });
+const f = new File([b], 'test.vcf', { type: 'text/vcard' });
+return navigator.canShare({ files: [f] });
+} catch (e) {
+return false;
+}
+}
+
+_sendButtonLabel() {
+const ua = navigator.userAgent || '';
+if (/iphone|ipad|ipod/i.test(ua)) return 'Send via AirDrop';
+if (/android/i.test(ua))          return 'Nearby Share';
+return 'Send Contact';
+}
+
+/** Escape a string for safe insertion as HTML text content. */
 esc(str) {
 if (!str) return '';
-const div = document.createElement('div');
-div.textContent = String(str);
-return div.innerHTML;
+const d = document.createElement('div');
+d.textContent = String(str);
+return d.innerHTML;
+}
+
+/**
+ * Escape a plain-text string for embedding in a vCard TEXT value.
+ * Per RFC 2426 §4, backslash, semicolon, comma, and newlines must be escaped.
+ */
+vcardEsc(str) {
+if (!str) return '';
+return String(str)
+.replace(/\\/g, '\\\\')
+.replace(/;/g, '\\;')
+.replace(/,/g, '\\,')
+.replace(/\r\n|\r|\n/g, '\\n');
+}
+
+/** Escape a string for safe use in an HTML attribute value. */
+escAttr(str) {
+if (!str) return '';
+return String(str)
+.replace(/&/g, '&amp;')
+.replace(/"/g, '&quot;')
+.replace(/'/g, '&#39;')
+.replace(/</g, '&lt;')
+.replace(/>/g, '&gt;');
 }
 
 safeURL(url) {
@@ -601,8 +865,6 @@ return '';
 }
 }
 
-// Boot safely: defer until DOM is ready when the script is in <head>,
-// or execute immediately when the DOM is already interactive/complete.
 function spx_photon_boot() {
 window.spxPhotonVCard = new SpxPhotonVCard();
 }
