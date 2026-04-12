@@ -48,6 +48,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class PwaController {
 
 	/**
+	 * Maximum character length for the PWA short_name field.
+	 *
+	 * The Web App Manifest spec recommends keeping short_name under 12
+	 * characters so it fits beneath the icon on most home-screen launchers.
+	 */
+	private const PWA_SHORT_NAME_MAX_LENGTH = 12;
+
+	/**
 	 * Register all WordPress hooks for the PWA controller.
 	 *
 	 * Called once from {@see Bootloader::init()}.
@@ -168,7 +176,7 @@ final class PwaController {
 			$app_name = $user->display_name;
 		}
 		$app_name  = sanitize_text_field( $app_name );
-		$short_name = mb_strimwidth( $app_name, 0, 12, '…' );
+		$short_name = mb_strimwidth( $app_name, 0, self::PWA_SHORT_NAME_MAX_LENGTH, '…' );
 
 		// ── Icon ─────────────────────────────────────────────────────────────────
 		// Priority: spx_img_brand_blob (ACF image field) → scf_business_logo_url → Gravatar.
@@ -432,8 +440,8 @@ JS;
 			. '</head>'
 			. '<body>'
 			. '<div class="icon">&#x1F4F5;</div>'
-			. '<div class="title">You\'re Offline</div>'
-			. '<div class="msg">Your business card will be available again once you\'re back online.</div>'
+			. '<div class="title">You&#8217;re Offline</div>'
+			. '<div class="msg">Your business card will be available again once you&#8217;re back online.</div>'
 			. '</body></html>';
 	}
 
@@ -478,7 +486,7 @@ JS;
 		);
 
 		?>
-		<link rel="manifest" href="<?php echo $manifest_url; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>">
+		<link rel="manifest" href="<?php echo esc_url( $manifest_url ); ?>">
 		<meta name="mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
