@@ -259,9 +259,9 @@ final class AssetLoader {
 			return false;
 		}
 
-		// Honour the spx_display_business_card ACF toggle.
+		// Honour the spx_state_card_active ACF toggle.
 		if ( function_exists( 'get_field' ) ) {
-			$display = get_field( 'spx_display_business_card', 'user_' . $user_id );
+			$display = get_field( 'spx_state_card_active', 'user_' . $user_id );
 			// Explicit false means "hide the card"; null / unset means default on.
 			if ( $display === false ) {
 				return false;
@@ -346,18 +346,17 @@ final class AssetLoader {
 	/**
 	 * Assemble the card data array for use in the JavaScript users map.
 	 *
-	 * Data is resolved per field using a "first non-empty value wins" strategy.
-	 * There is no single global precedence order applied uniformly to all fields;
-	 * each field has its own source priority.
-	 *
-	 * In practice the per-field priorities are:
-	 *   - Name, company, email, phone, address: WooCommerce billing meta is
-	 *     preferred when WooCommerce is active; ACF / SCF spx_* fields serve
-	 *     as the primary source otherwise; WordPress core (display_name,
-	 *     user_email, user_url) is the universal fallback.
-	 *   - Title, phones (CELL/WORK/FAX), WhatsApp, website: ACF / SCF
-	 *     spx_* fields when ACF is active; WordPress core otherwise.
-	 *   - Profile photo: Gravatar via get_avatar_url() (size 200, d=404) only.
+	 * Data resolution strategy:
+	 *   - Name:     WooCommerce billing name → WP display_name.
+	 *   - Title:    ACF spx_role_title.
+	 *   - Company:  ACF spx_org_name.
+	 *   - Phones:   ACF spx_rel_com_matrix repeater (phone-type channels).
+	 *   - Channels: ACF spx_rel_com_matrix repeater (messaging-type channels).
+	 *   - Social:   ACF spx_rel_social_matrix repeater.
+	 *   - Email:    WP user_email (canonical).
+	 *   - Website:  WP user_url.
+	 *   - Address:  ACF spx_loc_* fields.
+	 *   - Photo:    Gravatar via get_avatar_url() — only when spx_state_img_pub is truthy.
 	 *
 	 * @param  \WP_User $user            The card owner.
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
@@ -365,6 +364,7 @@ final class AssetLoader {
 	 */
 	private static function build_card_data( \WP_User $user, bool $disable_sensors ): array {
 		$uid = (int) $user->ID;
+		$acf = function_exists( 'get_field' );
 
 		// ── Name ────────────────────────────────────────────────────────────────
 		$name = '';
@@ -377,127 +377,142 @@ final class AssetLoader {
 			$name = $user->display_name;
 		}
 
-		// ── Job title (ACF only — no WooCommerce equivalent) ────────────────────
+		// ── Job title ────────────────────────────────────────────────────────────
 		$title = '';
-		if ( function_exists( 'get_field' ) ) {
-			$title = (string) ( get_field( 'spx_title', 'user_' . $uid ) ?: '' );
+		if ( $acf ) {
+			$title = (string) ( get_field( 'spx_role_title', 'user_' . $uid ) ?: '' );
 		}
 
 		// ── Company ─────────────────────────────────────────────────────────────
 		$company = '';
-		if ( class_exists( 'WooCommerce' ) ) {
-			$company = (string) ( get_user_meta( $uid, 'billing_company', true ) ?: '' );
-		}
-		if ( '' === $company && function_exists( 'get_field' ) ) {
-			$company = (string) ( get_field( 'spx_company', 'user_' . $uid ) ?: '' );
+		if ( $acf ) {
+			$company = (string) ( get_field( 'spx_org_name', 'user_' . $uid ) ?: '' );
 		}
 
-		// ── Phone numbers ────────────────────────────────────────────────────────
-		$phones = [];
-		if ( function_exists( 'get_field' ) ) {
-			$mobile = (string) ( get_field( 'spx_mobile', 'user_' . $uid ) ?: '' );
-			if ( '' !== $mobile ) {
-				$phones[] = [ 'type' => 'CELL', 'number' => $mobile ];
-			}
+		// ── Communication channels (phones + messaging) ──────────────────────────
+		// Phone-type channel keys map directly to vCard TEL TYPE values.
+		$phone_type_map = [
+			'mobile' => 'CELL',
+			'work'   => 'WORK',
+			'home'   => 'HOME',
+			'direct' => 'WORK',
+			'fax'    => 'FAX',
+		];
+		// Messaging-type keys are carried as custom channels (not vCard TEL).
+		$messaging_types = [ 'whatsapp', 'telegram', 'signal', 'wechat', 'viber', 'line', 'zalo', 'kakao', 'teams', 'zoom' ];
 
-			$work_phone = (string) ( get_field( 'spx_work_phone', 'user_' . $uid ) ?: '' );
-			if ( '' !== $work_phone ) {
-				$phones[] = [ 'type' => 'WORK', 'number' => $work_phone ];
-			}
+		$phones   = [];
+		$channels = [];
 
-			$fax = (string) ( get_field( 'spx_fax', 'user_' . $uid ) ?: '' );
-			if ( '' !== $fax ) {
-				$phones[] = [ 'type' => 'FAX', 'number' => $fax ];
+		if ( $acf ) {
+			$com_matrix = get_field( 'spx_rel_com_matrix', 'user_' . $uid );
+			if ( is_array( $com_matrix ) ) {
+				foreach ( $com_matrix as $row ) {
+					if ( ! is_array( $row ) ) {
+						continue;
+					}
+					$key = (string) ( $row['spx_node_key'] ?? '' );
+					$val = (string) ( $row['spx_node_val'] ?? '' );
+					if ( '' === $val ) {
+						continue;
+					}
+					if ( isset( $phone_type_map[ $key ] ) ) {
+						$phones[] = [ 'type' => $phone_type_map[ $key ], 'number' => $val ];
+					} elseif ( in_array( $key, $messaging_types, true ) ) {
+						$channels[] = [ 'key' => $key, 'val' => $val ];
+					}
+				}
 			}
 		}
 
-		// Fallback: WooCommerce billing phone when no ACF phones configured.
-		if ( empty( $phones ) && class_exists( 'WooCommerce' ) ) {
-			$billing_phone = (string) ( get_user_meta( $uid, 'billing_phone', true ) ?: '' );
-			if ( '' !== $billing_phone ) {
-				$phones[] = [ 'type' => 'CELL', 'number' => $billing_phone ];
+		// ── Social media ─────────────────────────────────────────────────────────
+		$social = [];
+		if ( $acf ) {
+			$social_matrix = get_field( 'spx_rel_social_matrix', 'user_' . $uid );
+			if ( is_array( $social_matrix ) ) {
+				foreach ( $social_matrix as $row ) {
+					if ( ! is_array( $row ) ) {
+						continue;
+					}
+					$key = (string) ( $row['spx_node_key'] ?? '' );
+					$val = (string) ( $row['spx_node_val'] ?? '' );
+					if ( '' !== $key && '' !== $val ) {
+						$social[] = [ 'key' => $key, 'val' => $val ];
+					}
+				}
 			}
-		}
-
-		// ── WhatsApp ─────────────────────────────────────────────────────────────
-		$whatsapp = '';
-		if ( function_exists( 'get_field' ) ) {
-			$whatsapp = (string) ( get_field( 'spx_whatsapp_phone', 'user_' . $uid ) ?: '' );
 		}
 
 		// ── Email ────────────────────────────────────────────────────────────────
 		$email = $user->user_email;
-		if ( class_exists( 'WooCommerce' ) ) {
-			$billing_email = (string) ( get_user_meta( $uid, 'billing_email', true ) ?: '' );
-			if ( '' !== $billing_email ) {
-				$email = $billing_email;
-			}
-		}
 
-		// ── Website ──────────────────────────────────────────────────────────────
-		$website = '';
-		if ( function_exists( 'get_field' ) ) {
-			$website = (string) ( get_field( 'spx_website', 'user_' . $uid ) ?: '' );
-		}
-		if ( '' === $website ) {
-			$website = $user->user_url ?: '';
-		}
+		// ── Website (WP core user_url) ───────────────────────────────────────────
+		$website = $user->user_url ?: '';
 
 		// ── Postal address ───────────────────────────────────────────────────────
 		$address = [];
-		if ( class_exists( 'WooCommerce' ) ) {
+		if ( $acf ) {
 			$address = [
-				'street1'  => (string) ( get_user_meta( $uid, 'billing_address_1', true ) ?: '' ),
-				'street2'  => (string) ( get_user_meta( $uid, 'billing_address_2', true ) ?: '' ),
-				'city'     => (string) ( get_user_meta( $uid, 'billing_city', true ) ?: '' ),
-				'state'    => (string) ( get_user_meta( $uid, 'billing_state', true ) ?: '' ),
-				'postcode' => (string) ( get_user_meta( $uid, 'billing_postcode', true ) ?: '' ),
-				'country'  => (string) ( get_user_meta( $uid, 'billing_country', true ) ?: '' ),
-			];
-		} elseif ( function_exists( 'get_field' ) ) {
-			$address = [
-				'street1'  => (string) ( get_field( 'spx_address_1', 'user_' . $uid ) ?: '' ),
-				'street2'  => (string) ( get_field( 'spx_address_2', 'user_' . $uid ) ?: '' ),
-				'city'     => (string) ( get_field( 'spx_city', 'user_' . $uid ) ?: '' ),
-				'state'    => (string) ( get_field( 'spx_state', 'user_' . $uid ) ?: '' ),
-				'postcode' => (string) ( get_field( 'spx_postcode', 'user_' . $uid ) ?: '' ),
-				'country'  => (string) ( get_field( 'spx_country', 'user_' . $uid ) ?: '' ),
+				'street1'  => (string) ( get_field( 'spx_loc_addr_01', 'user_' . $uid ) ?: '' ),
+				'street2'  => (string) ( get_field( 'spx_loc_addr_02', 'user_' . $uid ) ?: '' ),
+				'city'     => (string) ( get_field( 'spx_loc_city', 'user_' . $uid ) ?: '' ),
+				'state'    => (string) ( get_field( 'spx_loc_region', 'user_' . $uid ) ?: '' ),
+				'postcode' => (string) ( get_field( 'spx_loc_postcode', 'user_' . $uid ) ?: '' ),
+				'country'  => (string) ( get_field( 'spx_loc_country_code', 'user_' . $uid ) ?: '' ),
 			];
 		}
 
-		// ── Photo (Gravatar) ─────────────────────────────────────────────────────
-		// Request a 404 when the user has no Gravatar so the JS img.onerror
-		// handler can reliably hide the broken image instead of showing a
-		// WordPress default avatar fallback.
-		$photo = (string) get_avatar_url(
-			$uid,
-			[
-				'size'    => 200,
-				'default' => '404',
-			]
-		);
-
-		// ── Business logo (legacy SCF / custom meta) ─────────────────────────────
-		$logo = (string) ( get_user_meta( $uid, 'scf_business_logo_url', true ) ?: '' );
+		// ── Profile photo ────────────────────────────────────────────────────────
+		// Only included when the user has explicitly opted in (spx_state_img_pub).
+		// Default (null / never saved) is treated as opted-in (default_value = 1).
+		$photo = '';
+		if ( $acf ) {
+			$img_pub = get_field( 'spx_state_img_pub', 'user_' . $uid );
+		} else {
+			$img_pub = null;
+		}
+		if ( $img_pub !== false ) {
+			// Request a 404 when the user has no Gravatar so the JS img.onerror
+			// handler can reliably hide the broken image.
+			$photo = (string) get_avatar_url(
+				$uid,
+				[
+					'size'    => 200,
+					'default' => '404',
+				]
+			);
+		}
 
 		return [
-			'name'      => sanitize_text_field( $name ),
-			'company'   => sanitize_text_field( $company ),
-			'title'     => sanitize_text_field( $title ),
-			'phones'    => array_map(
+			'name'     => sanitize_text_field( $name ),
+			'company'  => sanitize_text_field( $company ),
+			'title'    => sanitize_text_field( $title ),
+			'phones'   => array_map(
 				static fn( array $p ): array => [
 					'type'   => strtoupper( sanitize_key( $p['type'] ) ),
 					'number' => sanitize_text_field( $p['number'] ),
 				],
 				$phones
 			),
-			'whatsapp'  => sanitize_text_field( $whatsapp ),
-			'email'     => sanitize_email( $email ),
-			'website'   => esc_url_raw( $website ),
-			'photo'     => esc_url_raw( $photo ),
-			'logo'      => esc_url_raw( $logo ),
-			'address'   => array_map( 'sanitize_text_field', $address ),
-			'noSensor'  => (bool) $disable_sensors,
+			'channels' => array_map(
+				static fn( array $c ): array => [
+					'key' => sanitize_key( $c['key'] ),
+					'val' => sanitize_text_field( $c['val'] ),
+				],
+				$channels
+			),
+			'social'   => array_map(
+				static fn( array $s ): array => [
+					'key' => sanitize_text_field( $s['key'] ),
+					'val' => esc_url_raw( $s['val'] ),
+				],
+				$social
+			),
+			'email'    => sanitize_email( $email ),
+			'website'  => esc_url_raw( $website ),
+			'photo'    => esc_url_raw( $photo ),
+			'address'  => array_map( 'sanitize_text_field', $address ),
+			'noSensor' => (bool) $disable_sensors,
 		];
 	}
 }
