@@ -137,8 +137,7 @@ final class Bootloader {
 			if ( ! empty( $site_ids ) ) {
 				foreach ( $site_ids as $site_id ) {
 					switch_to_blog( (int) $site_id );
-					delete_transient( 'sparxstar_photon_vcard_activation_notice' );
-					flush_rewrite_rules( false );
+					self::deactivate_for_site();
 				}
 
 				restore_current_blog();
@@ -147,8 +146,25 @@ final class Bootloader {
 			return;
 		}
 
+		self::deactivate_for_site();
+	}
+
+	/**
+	 * Clean up transients and cached rewrite rules for the current site.
+	 *
+	 * Intentionally deletes the `rewrite_rules` option rather than calling
+	 * flush_rewrite_rules(): during the deactivation request the plugin's
+	 * hooks (including PwaController::register_rewrite_rules) are still
+	 * registered in memory, so flush_rewrite_rules() would immediately
+	 * regenerate and re-persist the plugin's rules.  Deleting the option
+	 * clears the cache unconditionally; WordPress regenerates a clean set
+	 * on the next request, when the plugin is no longer active.
+	 *
+	 * @return void
+	 */
+	private static function deactivate_for_site(): void {
 		delete_transient( 'sparxstar_photon_vcard_activation_notice' );
-		flush_rewrite_rules( false );
+		delete_option( 'rewrite_rules' );
 	}
 
 	/**
