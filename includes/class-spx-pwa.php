@@ -333,11 +333,25 @@ var OFFLINE_HTML = {$offline_html_js};
 
 var STATIC_EXTS = /\.(css|js|png|jpg|jpeg|svg|gif|webp|woff2?|ttf|ico)(\?.*)?$/i;
 
-/* ── Install: pre-cache static assets ───────────────────────────────── */
+		/* ── Install: pre-cache static assets ───────────────────────────────── */
 self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
-      return cache.addAll(PRECACHE.filter(Boolean));
+      var precacheUrls = PRECACHE.filter(Boolean);
+
+      return Promise.all(
+        precacheUrls.map(function (url) {
+          return fetch(url).then(function (response) {
+            if (!response || !response.ok) {
+              return null;
+            }
+
+            return cache.put(url, response.clone());
+          }).catch(function () {
+            return null;
+          });
+        })
+      );
     }).then(function () {
       return self.skipWaiting();
     })
