@@ -426,7 +426,7 @@ var PRECACHE     = {$precache_json};
 var OFFLINE_HTML = {$offline_html_js};
 var SPX_BASE     = {$home_path_js};
 
-var STATIC_EXTS = /\.(css|js|png|jpg|jpeg|svg|gif|webp|woff2?|ttf|ico)(\?.*)?$/i;
+var STATIC_EXTS = /\.(css|js|png|jpg|jpeg|svg|gif|webp|avif|bmp|jxl|heic|heif|woff2?|ttf|otf|eot|ico|webmanifest)(\?.*)?$/i;
 
 		/* ── Install: pre-cache static assets ───────────────────────────────── */
 self.addEventListener('install', function (event) {
