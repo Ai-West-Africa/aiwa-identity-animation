@@ -157,8 +157,15 @@ final class PwaController {
 				|| str_contains( $request_uri, '://' ) ) {
 				$request_uri = '/';
 			}
+			$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( (string) $_SERVER['REQUEST_URI'] ) : '/';
+			$request_uri = '/' . ltrim( $request_uri, '/' );
+
 			$return_url = esc_url_raw(
-				add_query_arg( 'spx_app', '1', home_url( $request_uri ) )
+				add_query_arg(
+					'spx_app',
+					'1',
+					home_url( $request_uri )
+				)
 			);
 			wp_safe_redirect( wp_login_url( $return_url ), 302 );
 			exit;
