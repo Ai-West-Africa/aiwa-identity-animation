@@ -11,16 +11,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * PWA Controller — Stealth PWA for owner-only home-screen installation.
  *
- * Implements a "Stealth PWA": the Web App Manifest and Service Worker are
- * gated behind WordPress authentication.  Public visitors see a standard,
- * fast website with no install prompt.  When the card owner views their own
- * card while logged in, their device receives the manifest, and the browser
- * offers to add the card to the home screen.  Once installed, the owner opens
- * the card in standalone mode (no browser chrome) directly from their icon.
+ * Implements a "Stealth PWA":
+ *
+ *   – Web App Manifest (/spx-pwa-manifest.json) is auth-gated: unauthenticated
+ *     requests receive HTTP 404, so the browser never shows an install prompt
+ *     to public visitors.
+ *
+ *   – Service Worker (/spx-pwa-sw.js) is intentionally PUBLIC: browsers and
+ *     already-installed PWAs must be able to fetch an updated worker file at
+ *     any time — including when the owner's auth cookie has expired — so they
+ *     can receive cache-invalidation and bug-fix updates without requiring a
+ *     fresh login.  No sensitive data is embedded in the SW script itself;
+ *     the precache list is personalised only when a valid session exists, and
+ *     falls back to plugin-level assets only when the request is unauthenticated.
  *
  * Virtual routes handled via WordPress rewrite rules:
- *   /spx-pwa-manifest.json  — Owner-only Web App Manifest (auth-gated JSON)
- *   /spx-pwa-sw.js          — Dynamic Service Worker script
+ *   /spx-pwa-manifest.json  — Owner-only Web App Manifest (auth-gated: 404 for guests)
+ *   /spx-pwa-sw.js          — Service Worker script (intentionally public for update flow)
  *
  * Cookie persistence:
  *   When the installed PWA opens with ?spx_app=1, the auth-cookie expiration
@@ -157,7 +164,7 @@ final class PwaController {
 				|| str_contains( $request_uri, '://' ) ) {
 				$request_uri = '/';
 			}
-			$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( (string) $_SERVER['REQUEST_URI'] ) : '/';
+			// Normalize: ensure exactly one leading slash on the validated value.
 			$request_uri = '/' . ltrim( $request_uri, '/' );
 
 			$return_url = esc_url_raw(
