@@ -362,9 +362,10 @@ final class PwaController {
 			);
 		}
 
-		$precache_urls = array_values( array_filter( [ $css_url, $js_url, $photo_url ] ) );
-		$precache_json = (string) wp_json_encode( $precache_urls, JSON_UNESCAPED_SLASHES );
-		$cache_name    = 'spx-vcard-v' . $version;
+		$precache_urls        = array_values( array_filter( [ $css_url, $js_url, $photo_url ] ) );
+		$precache_json_result = wp_json_encode( $precache_urls, JSON_UNESCAPED_SLASHES );
+		$precache_json        = is_string( $precache_json_result ) ? $precache_json_result : '[]';
+		$cache_name           = 'spx-vcard-v' . $version;
 
 		// Derive the site's base path for the SW scope (Service-Worker-Allowed header)
 		// and for path-restriction guards in the SW fetch handler.
