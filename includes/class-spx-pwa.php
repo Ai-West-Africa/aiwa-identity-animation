@@ -436,11 +436,30 @@ self.addEventListener('install', function (event) {
 
       return Promise.all(
         precacheUrls.map(function (url) {
-          return fetch(url).then(function (response) {
-            if (!response || !response.ok) {
+          var fetchOptions = {};
+          var isAbsoluteHttpUrl = /^https?:\/\//i.test(url);
+          var isCrossOriginUrl = false;
+
+          if (isAbsoluteHttpUrl) {
+            try {
+              isCrossOriginUrl = new URL(url, self.location.origin).origin !== self.location.origin;
+            } catch (error) {
+              isCrossOriginUrl = false;
+            }
+          }
+
+          if (isCrossOriginUrl) {
+            fetchOptions.mode = 'no-cors';
+          }
+
+          return fetch(url, fetchOptions).then(function (response) {
+            if (!response) {
               return null;
             }
 
+            if (!response.ok && response.type !== 'opaque') {
+              return null;
+            }
             return cache.put(url, response.clone());
           }).catch(function () {
             return null;
