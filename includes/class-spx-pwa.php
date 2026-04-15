@@ -56,6 +56,16 @@ final class PwaController {
 	private const PWA_SHORT_NAME_MAX_LENGTH = 12;
 
 	/**
+	 * Minimum icon dimension (width and height) required for a PWA maskable icon.
+	 *
+	 * The PWA manifest spec requires icons of at least 192×192 px for the
+	 * launcher icon and 512×512 px for the splash screen.  Images smaller than
+	 * this threshold are reported with size 'any' rather than an explicit WxH
+	 * string, letting the browser decide how to use them.
+	 */
+	private const PWA_MIN_ICON_SIZE = 192;
+
+	/**
 	 * Register all WordPress hooks for the PWA controller.
 	 *
 	 * Called once from {@see Bootloader::init()}.
@@ -117,10 +127,23 @@ final class PwaController {
 		// phpcs:enable
 
 		// Session persistence: if the installed PWA opens with ?spx_app=1 and
-		// the cookie has expired, send the owner to wp-login once.
+		// the cookie has expired, send the owner to wp-login once, preserving
+		// the full current URL (including ?spx_app=1) as the return destination.
 		if ( '1' === $spx_app && ! is_user_logged_in() ) {
+			// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$request_uri = isset( $_SERVER['REQUEST_URI'] )
+				? wp_unslash( (string) $_SERVER['REQUEST_URI'] )
+				: '/';
+			// phpcs:enable
+			// Guard against open-redirect: the URI must be a site-relative path only
+			// (not protocol-relative '//host/…' or absolute with scheme '://').
+			if ( ! str_starts_with( $request_uri, '/' )
+				|| str_starts_with( $request_uri, '//' )
+				|| str_contains( $request_uri, '://' ) ) {
+				$request_uri = '/';
+			}
 			$return_url = esc_url_raw(
-				add_query_arg( 'spx_app', '1', home_url( '/' ) )
+				add_query_arg( 'spx_app', '1', home_url( $request_uri ) )
 			);
 			wp_safe_redirect( wp_login_url( $return_url ), 302 );
 			exit;
@@ -161,16 +184,13 @@ final class PwaController {
 		}
 
 		// ── App name ─────────────────────────────────────────────────────────────
-		// Priority: spx_org_name → billing_company (WooCommerce) → spx_company → display_name.
+		// Priority: spx_org_name → billing_company (WooCommerce) → display_name.
 		$app_name = '';
 		if ( function_exists( 'get_field' ) ) {
 			$app_name = (string) ( get_field( 'spx_org_name', 'user_' . $uid ) ?: '' );
 		}
 		if ( '' === $app_name && class_exists( 'WooCommerce' ) ) {
 			$app_name = (string) ( get_user_meta( $uid, 'billing_company', true ) ?: '' );
-		}
-		if ( '' === $app_name && function_exists( 'get_field' ) ) {
-			$app_name = (string) ( get_field( 'spx_company', 'user_' . $uid ) ?: '' );
 		}
 		if ( '' === $app_name ) {
 			$app_name = $user->display_name;
@@ -180,22 +200,46 @@ final class PwaController {
 
 		// ── Icon ─────────────────────────────────────────────────────────────────
 		// Priority: spx_img_brand_blob (ACF image field) → scf_business_logo_url → Gravatar.
-		$icon_url = '';
+		// Capture mime type and dimensions alongside the URL so the manifest entry
+		// reflects what the server will actually serve (the site may convert
+		// uploads to avif/webp depending on browser support).
+		$icon_url    = '';
+		$icon_mime   = 'image/jpeg';
+		$icon_width  = 0;
+		$icon_height = 0;
+
 		if ( function_exists( 'get_field' ) ) {
 			$blob = get_field( 'spx_img_brand_blob', 'user_' . $uid );
 			if ( is_array( $blob ) && ! empty( $blob['url'] ) ) {
-				$icon_url = esc_url_raw( (string) $blob['url'] );
+				$icon_url    = esc_url_raw( (string) $blob['url'] );
+				$icon_mime   = sanitize_mime_type( (string) ( $blob['mime_type'] ?? 'image/jpeg' ) );
+				$icon_width  = absint( $blob['width'] ?? 0 );
+				$icon_height = absint( $blob['height'] ?? 0 );
 			} elseif ( is_string( $blob ) && '' !== $blob ) {
-				$icon_url = esc_url_raw( $blob );
+				$icon_url       = esc_url_raw( $blob );
+				$filetype_check = wp_check_filetype( $blob );
+				$icon_mime      = ! empty( $filetype_check['type'] )
+					? sanitize_mime_type( $filetype_check['type'] )
+					: 'image/jpeg';
 			}
 		}
 		if ( '' === $icon_url ) {
-			$icon_url = esc_url_raw( (string) ( get_user_meta( $uid, 'scf_business_logo_url', true ) ?: '' ) );
+			$scf_logo = (string) ( get_user_meta( $uid, 'scf_business_logo_url', true ) ?: '' );
+			if ( '' !== $scf_logo ) {
+				$icon_url       = esc_url_raw( $scf_logo );
+				$filetype_check = wp_check_filetype( $scf_logo );
+				$icon_mime      = ! empty( $filetype_check['type'] )
+					? sanitize_mime_type( $filetype_check['type'] )
+					: 'image/jpeg';
+			}
 		}
 		if ( '' === $icon_url ) {
-			$icon_url = esc_url_raw(
+			$icon_url    = esc_url_raw(
 				(string) get_avatar_url( $uid, [ 'size' => 512, 'default' => '404' ] )
 			);
+			$icon_mime   = 'image/jpeg';
+			$icon_width  = 512;
+			$icon_height = 512;
 		}
 
 		// ── start_url ─────────────────────────────────────────────────────────────
@@ -204,16 +248,19 @@ final class PwaController {
 		$start_url = esc_url_raw( add_query_arg( 'spx_app', '1', home_url( '/' ) ) );
 
 		// ── Icons array ──────────────────────────────────────────────────────────
+		// Use the actual dimensions and mime type captured during icon resolution.
+		// The size string uses 'any' when exact dimensions are unavailable.
 		$icons = [];
 		if ( '' !== $icon_url ) {
-			foreach ( [ '192x192', '512x512' ] as $size ) {
-				$icons[] = [
-					'src'     => $icon_url,
-					'sizes'   => $size,
-					'type'    => 'image/png',
-					'purpose' => 'any maskable',
-				];
-			}
+			$size_str = ( $icon_width >= self::PWA_MIN_ICON_SIZE && $icon_height >= self::PWA_MIN_ICON_SIZE )
+				? "{$icon_width}x{$icon_height}"
+				: 'any';
+			$icons[] = [
+				'src'     => $icon_url,
+				'sizes'   => $size_str,
+				'type'    => $icon_mime,
+				'purpose' => 'any maskable',
+			];
 		}
 
 		$manifest = [
@@ -291,7 +338,10 @@ final class PwaController {
 		$precache_json = (string) wp_json_encode( $precache_urls, JSON_UNESCAPED_SLASHES );
 		$cache_name    = 'spx-vcard-v' . $version;
 
-		$sw = self::build_sw_script( $cache_name, $precache_json );
+		// Derive the site's base path so the SW guard works in subdirectory installs.
+		$home_path = (string) ( wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/' );
+
+		$sw = self::build_sw_script( $cache_name, $precache_json, $home_path );
 
 		status_header( 200 );
 		header( 'Content-Type: application/javascript; charset=utf-8' );
@@ -309,16 +359,19 @@ final class PwaController {
 	 *
 	 * @param  string $cache_name     Cache storage key (versioned).
 	 * @param  string $precache_json  JSON-encoded array of URLs to pre-cache.
+	 * @param  string $home_path      Site base path (e.g. '/' or '/blog/') for path guards.
 	 * @return string                 Complete SW JavaScript source.
 	 */
-	private static function build_sw_script( string $cache_name, string $precache_json ): string {
+	private static function build_sw_script( string $cache_name, string $precache_json, string $home_path = '/' ): string {
 		$cache_name_js    = wp_json_encode( $cache_name );
 		$offline_html_js  = wp_json_encode( self::offline_html() );
+		$home_path_js     = wp_json_encode( rtrim( $home_path, '/' ) );
 
 		// Ensure json_encode failures do not produce invalid JS.
-		if ( false === $cache_name_js || false === $offline_html_js ) {
+		if ( false === $cache_name_js || false === $offline_html_js || false === $home_path_js ) {
 			$cache_name_js   = '"spx-vcard"';
 			$offline_html_js = '"<html><body>Offline</body></html>"';
+			$home_path_js    = '""';
 		}
 
 		return <<<JS
@@ -330,6 +383,7 @@ final class PwaController {
 var CACHE_NAME   = {$cache_name_js};
 var PRECACHE     = {$precache_json};
 var OFFLINE_HTML = {$offline_html_js};
+var SPX_BASE     = {$home_path_js};
 
 var STATIC_EXTS = /\.(css|js|png|jpg|jpeg|svg|gif|webp|woff2?|ttf|ico)(\?.*)?$/i;
 
@@ -379,13 +433,21 @@ self.addEventListener('fetch', function (event) {
   // Only handle GET requests for http(s) URLs.
   if (req.method !== 'GET' || !req.url.startsWith('http')) return;
 
+  // Never intercept wp-admin, wp-login, or wp-cron — these are sensitive
+  // authenticated routes that must never be cached or served stale.
+  var pathname = new URL(req.url).pathname;
+  if (pathname === SPX_BASE + '/wp-login.php' ||
+      pathname.startsWith(SPX_BASE + '/wp-admin') ||
+      pathname.startsWith(SPX_BASE + '/wp-cron.php')) return;
+
   if (STATIC_EXTS.test(req.url)) {
     // Cache-first: CSS, JS, images, fonts.
     event.respondWith(cacheFirst(req));
-  } else {
-    // Network-first: HTML pages, QR data, contact endpoints.
+  } else if (req.mode === 'navigate') {
+    // Network-first: HTML navigation requests only.
     event.respondWith(networkFirst(req));
   }
+  // Non-navigate, non-static requests (XHR/fetch API): pass through without caching.
 });
 
 /* ── Strategies ──────────────────────────────────────────────────────── */
@@ -398,9 +460,8 @@ function cacheFirst(req) {
         caches.open(CACHE_NAME).then(function (cache) { cache.put(req, clone); });
       }
       return response;
-    }).catch(function () {
-      return offlinePage();
     });
+    // Static assets: no offline HTML fallback — let the network error propagate.
   });
 }
 
@@ -413,6 +474,8 @@ function networkFirst(req) {
     return response;
   }).catch(function () {
     return caches.match(req).then(function (cached) {
+      // networkFirst is only called for navigate requests, so the offline
+      // HTML fallback is always an appropriate response type here.
       return cached || offlinePage();
     });
   });
