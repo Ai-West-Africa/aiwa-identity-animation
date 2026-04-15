@@ -66,6 +66,21 @@ final class PwaController {
 	private const PWA_MIN_ICON_SIZE = 192;
 
 	/**
+	 * Return the site's base URL path, used as the SW scope and Service-Worker-Allowed value.
+	 *
+	 * Returns '/' for root installs and '/blog/' (with trailing slash) for
+	 * subdirectory installs, matching the path component of home_url('/').
+	 * Consistent across serve_manifest(), serve_sw(), and inject_pwa_head().
+	 *
+	 * @return string Absolute URL path (always starts and ends with '/').
+	 */
+	private static function home_path(): string {
+		$path = wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/';
+		// Ensure a trailing slash so the SW scope is always a directory path.
+		return rtrim( $path, '/' ) . '/';
+	}
+
+	/**
 	 * Register all WordPress hooks for the PWA controller.
 	 *
 	 * Called once from {@see Bootloader::init()}.
@@ -272,7 +287,7 @@ final class PwaController {
 				$app_name
 			),
 			'start_url'        => $start_url,
-			'scope'            => '/',
+			'scope'            => self::home_path(),
 			'display'          => 'standalone',
 			'orientation'      => 'portrait',
 			'background_color' => '#1c1c1e',
@@ -280,9 +295,11 @@ final class PwaController {
 			'icons'            => $icons,
 		];
 
+		$sw_allowed_path = self::home_path();
+
 		status_header( 200 );
 		header( 'Content-Type: application/manifest+json; charset=utf-8' );
-		header( 'Service-Worker-Allowed: /' );
+		header( 'Service-Worker-Allowed: ' . $sw_allowed_path );
 		header( 'Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' );
 		header( 'X-Content-Type-Options: nosniff' );
 
@@ -338,15 +355,16 @@ final class PwaController {
 		$precache_json = (string) wp_json_encode( $precache_urls, JSON_UNESCAPED_SLASHES );
 		$cache_name    = 'spx-vcard-v' . $version;
 
-		// Derive the site's base path so the SW guard works in subdirectory installs.
-		$home_path = (string) ( wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/' );
+		// Derive the site's base path for the SW scope (Service-Worker-Allowed header)
+		// and for path-restriction guards in the SW fetch handler.
+		$home_path = self::home_path();
 
 		$sw = self::build_sw_script( $cache_name, $precache_json, $home_path );
 
 		status_header( 200 );
 		header( 'Content-Type: application/javascript; charset=utf-8' );
 		header( 'Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' );
-		header( 'Service-Worker-Allowed: /' );
+		header( 'Service-Worker-Allowed: ' . $home_path );
 		header( 'X-Content-Type-Options: nosniff' );
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -570,7 +588,7 @@ JS;
 		<meta name="theme-color" content="#1c1c1e">
 		<script>
 		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker.register(<?php echo wp_json_encode( home_url( '/spx-pwa-sw.js' ) ); ?>, { scope: '/' })
+			navigator.serviceWorker.register(<?php echo wp_json_encode( home_url( '/spx-pwa-sw.js' ) ); ?>, { scope: <?php echo wp_json_encode( self::home_path() ); ?> })
 				.catch(function(){});
 		}
 		</script>
@@ -581,10 +599,15 @@ JS;
 	 * Extend the auth-cookie lifetime to one year for PWA sessions.
 	 *
 	 * Fires on the auth_cookie_expiration filter during wp_set_auth_cookie().
-	 * Extends the expiration to YEAR_IN_SECONDS when:
+	 * Extends the expiration to YEAR_IN_SECONDS when ALL conditions are true:
+	 *   • $remember is true (the user explicitly opted in to staying logged in), AND
 	 *   • ?spx_app=1 is present in the current GET request, OR
-	 *   • The login form's redirect_to parameter contains spx_app=1
+	 *     the login form's redirect_to parameter contains spx_app=1
 	 *     (the owner just logged in from the PWA's redirect loop).
+	 *
+	 * Requiring $remember preserves WordPress's "remember me" semantics —
+	 * the extended lifetime is only granted when the user has explicitly
+	 * opted in, preventing silent year-long sessions on shared devices.
 	 *
 	 * @param  int  $expiration Default expiration in seconds.
 	 * @param  int  $user_id    The user ID being authenticated (unused here).
@@ -592,6 +615,10 @@ JS;
 	 * @return int              Extended or default expiration.
 	 */
 	public static function extend_cookie_for_pwa( int $expiration, int $user_id, bool $remember ): int {
+		if ( ! $remember ) {
+			return $expiration;
+		}
+
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.NonceVerification.Missing
 		$in_get = isset( $_GET['spx_app'] ) && '1' === sanitize_key( $_GET['spx_app'] );
 
