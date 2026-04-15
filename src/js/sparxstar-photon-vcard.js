@@ -442,7 +442,7 @@ if (phones.length) {
 const firstPhone = phones[0];
 const telHref = toTelHrefValue(firstPhone.number);
 if (telHref) {
-primaryPhoneHtml = `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}">TEL: + ${this.esc(firstPhone.number)}</a>`;
+primaryPhoneHtml = `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
 }
 }
 
