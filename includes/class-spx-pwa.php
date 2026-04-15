@@ -210,8 +210,12 @@ final class PwaController {
 		if ( '' === $app_name ) {
 			$app_name = $user->display_name;
 		}
-		$app_name  = sanitize_text_field( $app_name );
-		$short_name = mb_strimwidth( $app_name, 0, self::PWA_SHORT_NAME_MAX_LENGTH, '…' );
+		$app_name = sanitize_text_field( $app_name );
+		if ( function_exists( 'mb_strimwidth' ) ) {
+			$short_name = mb_strimwidth( $app_name, 0, self::PWA_SHORT_NAME_MAX_LENGTH, '…' );
+		} else {
+			$short_name = wp_html_excerpt( $app_name, self::PWA_SHORT_NAME_MAX_LENGTH, '…' );
+		}
 
 		// ── Icon ─────────────────────────────────────────────────────────────────
 		// Priority: spx_img_brand_blob (ACF image field) → scf_business_logo_url → Gravatar.
