@@ -38,10 +38,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   each site's mapped domain, never the network root.
  *
  * Nginx complement (add to the site's server block):
+ *   Do not hardcode Service-Worker-Allowed "/" here. The controller sends
+ *   that header dynamically from home_url('/') so root installs use "/"
+ *   and subdirectory/path-based multisite installs use their site base path
+ *   (for example "/blog/"). If you choose to set the header in Nginx
+ *   instead, it must exactly match this site's base path.
  * {@code
  * location ~ ^/spx-pwa-(manifest\.json|sw\.js)$ {
  *     try_files $uri $uri/ /index.php?$args;
- *     add_header Service-Worker-Allowed "/";
  *     add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
  *     include fastcgi_params;
  *     fastcgi_param SCRIPT_FILENAME $document_root/index.php;
