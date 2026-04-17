@@ -495,10 +495,16 @@ self.addEventListener('fetch', function (event) {
 
   // Never intercept wp-admin, wp-login, or wp-cron — these are sensitive
   // authenticated routes that must never be cached or served stale.
+  // Guard both the site base-path variant (for subdirectory single-site) and
+  // the root variant (WordPress core admin is always at /wp-admin/ and
+  // /wp-login.php even on multisite subdirectory sub-sites).
   var pathname = new URL(req.url).pathname;
-  if (pathname === SPX_BASE + '/wp-login.php' ||
+  if (pathname === '/wp-login.php' ||
+      pathname === SPX_BASE + '/wp-login.php' ||
+      pathname.startsWith('/wp-admin') ||
       pathname.startsWith(SPX_BASE + '/wp-admin') ||
-      pathname.startsWith(SPX_BASE + '/wp-cron.php')) return;
+      pathname === '/wp-cron.php' ||
+      pathname === SPX_BASE + '/wp-cron.php') return;
 
   if (STATIC_EXTS.test(req.url)) {
     // Cache-first: CSS, JS, images, fonts.
