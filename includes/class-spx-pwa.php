@@ -148,6 +148,17 @@ final class PwaController {
 	 * @return void
 	 */
 	public static function handle_virtual_routes(): void {
+		// Dispatch PWA virtual routes first so the SW endpoint (intentionally
+		// public) and the manifest endpoint (returns 404 for guests) are never
+		// caught by the ?spx_app=1 login-redirect below.
+		$action = (string) get_query_var( 'spx_pwa_action', '' );
+
+		if ( 'manifest' === $action ) {
+			self::serve_manifest();
+		} elseif ( 'sw' === $action ) {
+			self::serve_sw();
+		}
+
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		$spx_app = isset( $_GET['spx_app'] ) ? sanitize_key( $_GET['spx_app'] ) : '';
 		// phpcs:enable
@@ -180,14 +191,6 @@ final class PwaController {
 			);
 			wp_safe_redirect( wp_login_url( $return_url ), 302 );
 			exit;
-		}
-
-		$action = (string) get_query_var( 'spx_pwa_action', '' );
-
-		if ( 'manifest' === $action ) {
-			self::serve_manifest();
-		} elseif ( 'sw' === $action ) {
-			self::serve_sw();
 		}
 	}
 
@@ -624,9 +627,7 @@ JS;
 			$profile_version = (int) strtotime( $user->user_registered );
 		}
 
-		$manifest_url = esc_url(
-			add_query_arg( 'v', $profile_version, home_url( '/spx-pwa-manifest.json' ) )
-		);
+		$manifest_url = add_query_arg( 'v', $profile_version, home_url( '/spx-pwa-manifest.json' ) );
 
 		?>
 		<link rel="manifest" href="<?php echo esc_url( $manifest_url ); ?>">
