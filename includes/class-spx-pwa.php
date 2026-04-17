@@ -511,22 +511,26 @@ self.addEventListener('fetch', function (event) {
 
   if (STATIC_EXTS.test(req.url)) {
     // Cache-first: CSS, JS, images, fonts.
-    event.respondWith(cacheFirst(req));
+    event.respondWith(cacheFirst(event, req));
   } else if (req.mode === 'navigate') {
     // Network-first: HTML navigation requests only.
-    event.respondWith(networkFirst(req));
+    event.respondWith(networkFirst(event, req));
   }
   // Non-navigate, non-static requests (XHR/fetch API): pass through without caching.
 });
 
 /* ── Strategies ──────────────────────────────────────────────────────── */
-function cacheFirst(req) {
+function cacheFirst(event, req) {
   return caches.match(req).then(function (cached) {
     if (cached) return cached;
     return fetch(req).then(function (response) {
       if (response && response.status === 200) {
         var clone = response.clone();
-        caches.open(CACHE_NAME).then(function (cache) { cache.put(req, clone); });
+        // Tie the cache write to the event lifetime so the SW is not terminated
+        // before the put completes.
+        event.waitUntil(
+          caches.open(CACHE_NAME).then(function (cache) { cache.put(req, clone); })
+        );
       }
       return response;
     });
@@ -534,11 +538,15 @@ function cacheFirst(req) {
   });
 }
 
-function networkFirst(req) {
+function networkFirst(event, req) {
   return fetch(req).then(function (response) {
     if (response && response.status === 200) {
       var clone = response.clone();
-      caches.open(CACHE_NAME).then(function (cache) { cache.put(req, clone); });
+      // Tie the cache write to the event lifetime so the SW is not terminated
+      // before the put completes.
+      event.waitUntil(
+        caches.open(CACHE_NAME).then(function (cache) { cache.put(req, clone); })
+      );
     }
     return response;
   }).catch(function () {
