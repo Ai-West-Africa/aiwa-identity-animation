@@ -480,8 +480,12 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys().then(function (keys) {
       return Promise.all(
-        keys.filter(function (key) { return key !== CACHE_NAME; })
-            .map(function (key) { return caches.delete(key); })
+        // Only delete caches owned by this plugin ('spx-vcard-*').
+        // CacheStorage is origin-wide; other features/plugins may create their
+        // own entries and must not be wiped by this worker's activate handler.
+        keys.filter(function (key) {
+          return key.startsWith('spx-vcard-') && key !== CACHE_NAME;
+        }).map(function (key) { return caches.delete(key); })
       );
     }).then(function () {
       return self.clients.claim();
@@ -682,7 +686,11 @@ JS;
 		$in_redirect = false;
 		if ( isset( $_POST['redirect_to'] ) ) {
 			$redirect_to = sanitize_text_field( wp_unslash( (string) $_POST['redirect_to'] ) );
-			$in_redirect = false !== strpos( $redirect_to, 'spx_app=1' );
+			$parsed      = wp_parse_url( $redirect_to );
+			$qs          = isset( $parsed['query'] ) ? $parsed['query'] : '';
+			$params      = array();
+			wp_parse_str( $qs, $params );
+			$in_redirect = isset( $params['spx_app'] ) && '1' === $params['spx_app'];
 		}
 		// phpcs:enable
 
