@@ -109,8 +109,8 @@ z-index: 2;
 display: flex;
 flex-direction: column;
 align-items: center;
-justify-content: center;
-padding: 20px;
+justify-content: flex-start;
+padding: 20px 20px 62px;
 text-align: center;
 overflow: hidden;
 gap: 4px;
@@ -158,41 +158,42 @@ text-decoration: none;
 
 .spx_phone_link:hover { text-decoration: underline; }
 
-/* ---- Bottom action bar ---- */
+/* ---- Bottom action bar (inside white card) ---- */
 .spx_action_bar {
-width: 100%;
-background: #111;
-border-top: 1px solid #222;
-padding-bottom: env(safe-area-inset-bottom);
-flex-shrink: 0;
+position: absolute;
+bottom: 0;
+left: 0;
+right: 0;
+background: #ffffff;
+border-top: 1px solid #e5e5ea;
+border-radius: 0 0 10px 10px;
 }
 
 .spx_action_grid {
 display: grid;
 grid-template-columns: repeat(3, 1fr);
-padding: 14px 0;
+padding: 6px 0;
 }
 
 .spx_action_item {
 background: transparent;
 border: none;
-color: #ffffff;
+color: #8e8e93;
 display: flex;
 flex-direction: column;
 align-items: center;
-gap: 4px;
-cursor: pointer;
-padding: 4px 0;
-min-height: 44px;
 justify-content: center;
+cursor: pointer;
+padding: 8px 0;
+min-height: 44px;
 transition: color 0.18s ease;
 }
 
-.spx_action_item:hover  { color: #00f2ff; }
+.spx_action_item:hover  { color: #0062ff; }
 
 .spx_action_item svg {
-width: 24px;
-height: 24px;
+width: 22px;
+height: 22px;
 stroke: currentColor;
 fill: none;
 stroke-width: 2;
@@ -200,15 +201,8 @@ stroke-linecap: round;
 stroke-linejoin: round;
 }
 
-.spx_action_label {
-font-size: 9px;
-text-transform: uppercase;
-letter-spacing: 0.8px;
-color: inherit;
-}
-
 .spx_action_item:focus-visible {
-outline: 2px solid rgba(0, 242, 255, 0.7);
+outline: 2px solid rgba(0, 98, 255, 0.5);
 outline-offset: 2px;
 border-radius: 4px;
 }

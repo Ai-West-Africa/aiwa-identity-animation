@@ -442,7 +442,7 @@ if (phones.length) {
 const firstPhone = phones[0];
 const telHref = toTelHrefValue(firstPhone.number);
 if (telHref) {
-primaryPhoneHtml = `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}">TEL: + ${this.esc(firstPhone.number)}</a>`;
+primaryPhoneHtml = `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
 }
 }
 
@@ -471,21 +471,19 @@ overlay.innerHTML = `
       ${name    ? `<p class="spx_name">${name}</p>` : ''}
       ${title   ? `<p class="spx_title">${title}</p>` : ''}
       ${primaryPhoneHtml}
+      <div class="spx_action_bar" role="group" aria-label="Business card actions">
+        <div class="spx_action_grid">
+          ${canSendFile
+            ? `<button type="button" class="spx_action_item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}</button>`
+            : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
+          ${canShare
+            ? `<button type="button" class="spx_action_item" id="spax-photon-share-btn" aria-label="Share Link">${iconShare}</button>`
+            : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
+          <button type="button" class="spx_action_item" id="spax-photon-save-btn" aria-label="Save Contact">${iconSave}</button>
+        </div>
+      </div>
     </div>
   </div>
-
-
-<div class="spx_action_bar" role="group" aria-label="Business card actions">
-  <div class="spx_action_grid">
-    ${canSendFile
-      ? `<button type="button" class="spx_action_item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}<span class="spx_action_label">${sendLabel}</span></button>`
-      : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
-    ${canShare
-      ? `<button type="button" class="spx_action_item" id="spax-photon-share-btn" aria-label="Share Link">${iconShare}<span class="spx_action_label">Share</span></button>`
-      : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
-    <button type="button" class="spx_action_item" id="spax-photon-save-btn" aria-label="Save Contact">${iconSave}<span class="spx_action_label">Save</span></button>
-  </div>
-</div>
 </div>
 `;
 

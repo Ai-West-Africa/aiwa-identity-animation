@@ -161,7 +161,11 @@ final class Uninstaller {
 	}
 
 	/**
-	 * Recursively delete a directory and its contents.
+	 * Recursively delete a directory and its contents via WP_Filesystem.
+	 *
+	 * Uses the WordPress Filesystem API so that all file operations go through
+	 * the approved abstraction layer rather than direct PHP calls — satisfies
+	 * WordPress.WP.AlternativeFunctions coding standards requirements.
 	 *
 	 * @param  string $dir Absolute path to the directory.
 	 * @return bool   True on full success, false if any item could not be removed.
@@ -171,41 +175,24 @@ final class Uninstaller {
 			return false;
 		}
 
-		$items   = array_diff( (array) scandir( $dir ), [ '.', '..' ] );
-		$success = true;
+		global $wp_filesystem;
 
-		foreach ( $items as $item ) {
-			$path = $dir . DIRECTORY_SEPARATOR . $item;
-
-			if ( is_dir( $path ) ) {
-				if ( ! self::delete_directory( $path ) ) {
-					$success = false;
-				}
-				continue;
-			}
-
-			if ( ! is_writable( $path ) ) {
-				error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: file not writable, cannot delete: %s', $path ) );
-				$success = false;
-				continue;
-			}
-
-			if ( ! unlink( $path ) ) {
-				error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: failed to delete file: %s', $path ) );
-				$success = false;
-			}
+		if ( empty( $wp_filesystem ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
 		}
 
-		if ( ! is_writable( $dir ) ) {
-			error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: directory not writable, cannot delete: %s', $dir ) );
+		if ( ! ( $wp_filesystem instanceof \WP_Filesystem_Base ) ) {
+			error_log( 'SPARXSTAR Photon VCard uninstall: WP_Filesystem unavailable, skipping upload directory cleanup.' );
 			return false;
 		}
 
-		if ( ! rmdir( $dir ) ) {
+		$deleted = $wp_filesystem->rmdir( $dir, true );
+
+		if ( ! $deleted ) {
 			error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: failed to remove directory: %s', $dir ) );
-			return false;
 		}
 
-		return $success;
+		return (bool) $deleted;
 	}
 }
