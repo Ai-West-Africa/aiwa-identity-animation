@@ -15,10 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * per-user card data to JavaScript via wp_add_inline_script.
  *
  * Data priority order for each field (first non-empty value wins):
- *  – WooCommerce billing meta           — name, company, address, phone, email
- *  – ACF custom fields (spx_*)          — title, phones, WhatsApp, address fallback
+ *  – ACF custom fields (spx_*)          — company, title, phones, messaging, social, address, photo
  *  – WordPress core user fields         — display_name, user_url, user_email
- *  – Gravatar                           — photo via get_avatar_url()
+ *  – Gravatar                           — photo fallback via get_avatar_url() when no ACF image
  *
  * Multiple users may be localized in one request (e.g. pages with several
  * [spx_photon_vcard user_id="..."] shortcodes).  Each user's payload is
@@ -347,7 +346,7 @@ final class AssetLoader {
 	 * Assemble the card data array for use in the JavaScript users map.
 	 *
 	 * Data resolution strategy:
-	 *   - Name:     WooCommerce billing name → WP display_name.
+	 *   - Name:     WP display_name.
 	 *   - Title:    ACF spx_role_title.
 	 *   - Company:  ACF spx_org_name.
 	 *   - Phones:   ACF spx_rel_com_matrix repeater (phone-type channels).
@@ -356,7 +355,7 @@ final class AssetLoader {
 	 *   - Email:    WP user_email (canonical).
 	 *   - Website:  WP user_url.
 	 *   - Address:  ACF spx_loc_* fields.
-	 *   - Photo:    Gravatar via get_avatar_url() — only when spx_state_img_pub is truthy.
+	 *   - Photo:    ACF spx_img_brand_blob → Gravatar fallback (only when spx_state_img_pub is truthy).
 	 *
 	 * @param  \WP_User $user            The card owner.
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
@@ -367,15 +366,7 @@ final class AssetLoader {
 		$acf = function_exists( 'get_field' );
 
 		// ── Name ────────────────────────────────────────────────────────────────
-		$name = '';
-		if ( class_exists( 'WooCommerce' ) ) {
-			$first = (string) get_user_meta( $uid, 'billing_first_name', true );
-			$last  = (string) get_user_meta( $uid, 'billing_last_name', true );
-			$name  = trim( $first . ' ' . $last );
-		}
-		if ( '' === $name ) {
-			$name = $user->display_name;
-		}
+		$name = $user->display_name;
 
 		// ── Job title ────────────────────────────────────────────────────────────
 		$title = '';
@@ -463,8 +454,8 @@ final class AssetLoader {
 		}
 
 		// ── Profile photo ────────────────────────────────────────────────────────
-		// Only included when the user has explicitly opted in (spx_state_img_pub).
-		// Default (null / never saved) is treated as opted-in (default_value = 1).
+		// ACF spx_img_brand_blob takes priority. Gravatar is the fallback when no
+		// ACF image is set. Both are suppressed when spx_state_img_pub is false.
 		$photo = '';
 		if ( $acf ) {
 			$img_pub = get_field( 'spx_state_img_pub', 'user_' . $uid );
@@ -472,15 +463,26 @@ final class AssetLoader {
 			$img_pub = null;
 		}
 		if ( $img_pub !== false ) {
-			// Request a 404 when the user has no Gravatar so the JS img.onerror
-			// handler can reliably hide the broken image.
-			$photo = (string) get_avatar_url(
-				$uid,
-				[
-					'size'    => 200,
-					'default' => '404',
-				]
-			);
+			if ( $acf ) {
+				$blob = get_field( 'spx_img_brand_blob', 'user_' . $uid );
+				if ( is_array( $blob ) && ! empty( $blob['url'] ) ) {
+					$photo = esc_url_raw( (string) $blob['url'] );
+				} elseif ( is_string( $blob ) && '' !== $blob ) {
+					$photo = esc_url_raw( $blob );
+				}
+			}
+			// Fall back to Gravatar only when no ACF image is available.
+			if ( '' === $photo ) {
+				// Request a 404 when the user has no Gravatar so the JS img.onerror
+				// handler can reliably hide the broken image.
+				$photo = (string) get_avatar_url(
+					$uid,
+					[
+						'size'    => 200,
+						'default' => '404',
+					]
+				);
+			}
 		}
 
 		return [

@@ -220,13 +220,10 @@ final class PwaController {
 		}
 
 		// ── App name ─────────────────────────────────────────────────────────────
-		// Priority: spx_org_name → billing_company (WooCommerce) → display_name.
+		// Priority: ACF spx_org_name → WP display_name.
 		$app_name = '';
 		if ( function_exists( 'get_field' ) ) {
 			$app_name = (string) ( get_field( 'spx_org_name', 'user_' . $uid ) ?: '' );
-		}
-		if ( '' === $app_name && class_exists( 'WooCommerce' ) ) {
-			$app_name = (string) ( get_user_meta( $uid, 'billing_company', true ) ?: '' );
 		}
 		if ( '' === $app_name ) {
 			$app_name = $user->display_name;
