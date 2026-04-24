@@ -11,9 +11,11 @@
  *  – [spx_photon_vcard] shortcode button support (data-spx-vcard-trigger)
  *  – Business-card-styled overlay with Gravatar photo, full contact details
  *  – QR code (vCard data encoded)
+ *  – Fullscreen QR tap mode: tap QR to fill viewport (black on white) for easy across-desk scanning
+ *  – WhatsApp share button: wa.me direct link when a WhatsApp channel is configured
  *  – Save Contact (.vcf download)
  *  – Web Share API URL share
- *  – Send to Device: Web Share API with .vcf file (AirDrop / Nearby Share)
+ *  – Send to Device: Web Share API with .vcf file (fallback when no WhatsApp number)
  *  – Wake lock while card is visible
  *  – WCAG 2.1 focus trap + keyboard navigation
  *
@@ -452,10 +454,12 @@ const canSendFile = this._canSendFile();
 const canShare    = this._canShare();
 
 // SVG icons for action bar
-const iconSave  = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
-const iconShare = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
-const iconSend  = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+const iconSave       = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+const iconShare      = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
+const iconSend       = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+const iconWhatsApp   = `<svg viewBox="0 0 24 24" aria-hidden="true" class="spx-wa-icon"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.867-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.149-.172.198-.296.298-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>`;
 
+const waUrl      = this._whatsappUrl();
 const sendLabel  = this.esc(this._sendButtonLabel());
 
 overlay.innerHTML = `
@@ -465,7 +469,7 @@ overlay.innerHTML = `
   <div class="spx_card_wrapper">
     <div class="spx_card_content">
       ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="56" height="56" loading="eager" decoding="async">` : ''}
-      <div id="spax-photon-qr" class="spx_qr_code" aria-label="Scan QR code to save contact"></div>
+      <div id="spax-photon-qr" class="spx_qr_code" role="button" tabindex="0" aria-label="Tap to expand QR code fullscreen"></div>
       <span class="spx_scan_label" aria-hidden="true">Scan to save contact</span>
       ${company ? `<p class="spx_company">${company}</p>` : ''}
       ${name    ? `<p class="spx_name">${name}</p>` : ''}
@@ -473,9 +477,11 @@ overlay.innerHTML = `
       ${primaryPhoneHtml}
       <div class="spx_action_bar" role="group" aria-label="Business card actions">
         <div class="spx_action_grid">
-          ${canSendFile
-            ? `<button type="button" class="spx_action_item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}</button>`
-            : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
+          ${waUrl
+            ? `<a class="spx_action_item spx_action_item--whatsapp" href="${this.escAttr(waUrl)}" target="_blank" rel="noopener noreferrer" id="spax-photon-wa-btn" aria-label="Chat on WhatsApp">${iconWhatsApp}</a>`
+            : canSendFile
+              ? `<button type="button" class="spx_action_item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}</button>`
+              : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
           ${canShare
             ? `<button type="button" class="spx_action_item" id="spax-photon-share-btn" aria-label="Share Link">${iconShare}</button>`
             : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
@@ -520,11 +526,20 @@ const shareBtn = document.getElementById('spax-photon-share-btn');
 const saveBtn  = document.getElementById('spax-photon-save-btn');
 const closeBtn = document.getElementById('spax-photon-close-btn');
 const overlay  = document.getElementById('spax-photon-card-overlay');
+const qrEl     = document.getElementById('spax-photon-qr');
 
 if (sendBtn)  sendBtn.addEventListener( 'click', () => this.sendToDevice(),  { passive: true });
 if (shareBtn) shareBtn.addEventListener('click', () => this.shareCard(),     { passive: true });
 if (saveBtn)  saveBtn.addEventListener( 'click', () => this.downloadVCard(), { passive: true });
 if (closeBtn) closeBtn.addEventListener('click', () => this.closeCard(),     { passive: true });
+
+// QR tap → fullscreen mode.
+if (qrEl) {
+qrEl.addEventListener('click', () => this.openQRFullscreen(), { passive: true });
+qrEl.addEventListener('keydown', (e) => {
+if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openQRFullscreen(); }
+});
+}
 
 // Hide broken profile image without an inline onerror (CSP-safe).
 const photoEl = overlay.querySelector('.spx_user_photo');
@@ -540,6 +555,10 @@ if (e.target === overlay) this.closeCard();
 closeCard() {
 const overlay = document.getElementById('spax-photon-card-overlay');
 if (!overlay) return;
+
+// Close fullscreen QR if open so it doesn't orphan above the page.
+const fsQr = document.getElementById('spax-photon-qr-fs');
+if (fsQr) fsQr.remove();
 
 document.body.classList.remove('spax-photon-card-active');
 document.body.style.top = '';
@@ -805,6 +824,93 @@ cb();
 } else if (typeof console !== 'undefined') {
 console.warn('SpxPhotonVCard: QRCode library not found. Ensure qrcode.min.js is enqueued.');
 }
+}
+
+/**
+ * Expand the QR code to fill the entire viewport for easy across-the-desk
+ * scanning.  Uses maximum contrast (black on white) and shows a brightness
+ * nudge for outdoor/direct-sunlight use cases.  Escape or tap closes only
+ * this overlay without dismissing the main card.
+ */
+openQRFullscreen() {
+if (document.getElementById('spax-photon-qr-fs')) return;
+
+const fs = document.createElement('div');
+fs.id = 'spax-photon-qr-fs';
+fs.setAttribute('role', 'dialog');
+fs.setAttribute('aria-modal', 'true');
+fs.setAttribute('aria-label', 'QR code fullscreen — tap to close');
+fs.setAttribute('tabindex', '-1');
+
+const inner = document.createElement('div');
+inner.id = 'spax-photon-qr-fs-inner';
+
+const tip = document.createElement('p');
+tip.className = 'spx_qr_fs_tip';
+tip.textContent = '☀ Increase brightness for best outdoor scan';
+tip.setAttribute('aria-hidden', 'true');
+
+const label = document.createElement('p');
+label.className = 'spx_qr_fs_label';
+label.textContent = 'Tap anywhere to close';
+label.setAttribute('aria-hidden', 'true');
+
+fs.appendChild(inner);
+fs.appendChild(tip);
+fs.appendChild(label);
+
+this.ensureQRCodeLib(() => {
+inner.innerHTML = '';
+// eslint-disable-next-line no-undef
+new QRCode(inner, {
+text: this.generateVCard(),
+width: 300,
+height: 300,
+correctLevel: QRCode.CorrectLevel.M
+});
+});
+
+const close = () => {
+fs.remove();
+const qrEl = document.getElementById('spax-photon-qr');
+if (qrEl) qrEl.focus();
+};
+
+fs.addEventListener('click', close, { passive: true });
+fs.addEventListener('keydown', (e) => {
+if (e.key === 'Escape') { e.stopPropagation(); close(); return; }
+if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); close(); }
+});
+
+document.body.appendChild(fs);
+fs.focus();
+}
+
+/* ---------------------------
+   WHATSAPP HELPERS
+---------------------------- */
+
+/**
+ * Return the raw WhatsApp number string from the card's channels data,
+ * or an empty string when no WhatsApp channel is configured.
+ */
+_whatsappNumber() {
+const channels = Array.isArray(this.d.channels) ? this.d.channels : [];
+const wa = channels.find(c => c.key === 'whatsapp');
+return wa ? String(wa.val || '').trim() : '';
+}
+
+/**
+ * Build a wa.me deep-link URL from the configured WhatsApp number.
+ * Strips all non-digit characters so the URL conforms to the wa.me format
+ * (international number, digits only, no leading +).
+ * Returns an empty string when no WhatsApp channel is configured.
+ */
+_whatsappUrl() {
+const raw = this._whatsappNumber();
+if (!raw) return '';
+const digits = raw.replace(/[^\d]/g, '');
+return digits ? `https://wa.me/${digits}` : '';
 }
 
 /* ---------------------------
