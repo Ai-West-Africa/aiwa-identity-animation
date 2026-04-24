@@ -113,6 +113,7 @@ final class Bootloader {
 		set_transient( 'sparxstar_photon_vcard_activation_notice', true, 60 );
 
 		// Register PWA rewrite rules so flush_rewrite_rules captures them.
+		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-acf-helper.php';
 		if ( ! class_exists( PwaController::class ) ) {
 			require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-pwa.php';
 		}
@@ -200,6 +201,7 @@ final class Bootloader {
 			);
 		}
 
+		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-acf-helper.php';
 		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-asset-loader.php';
 		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-acf-fields.php';
 		require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-shortcode.php';

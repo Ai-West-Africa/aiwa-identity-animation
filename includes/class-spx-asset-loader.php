@@ -14,10 +14,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Enqueues the plugin stylesheet, main script, and QR library, then passes
  * per-user card data to JavaScript via wp_add_inline_script.
  *
- * Data priority order for each field (first non-empty value wins):
- *  – ACF custom fields (spx_*)          — company, title, phones, messaging, social, address, photo
- *  – WordPress core user fields         — display_name, user_url, user_email
- *  – Gravatar                           — photo fallback via get_avatar_url() when no ACF image
+ * Data sources per field:
+ *  – Name, email, website — WordPress core user object (display_name, user_email, user_url)
+ *  – Company, title, address, phones, channels, social — ACF spx_* fields
+ *  – Photo — ACF spx_img_brand_blob (when set); falls back to WP avatar / Gravatar
+ *            when no ACF image is available; suppressed when spx_state_img_pub is false
  *
  * Multiple users may be localized in one request (e.g. pages with several
  * [spx_photon_vcard user_id="..."] shortcodes).  Each user's payload is
@@ -464,12 +465,8 @@ final class AssetLoader {
 		}
 		if ( $img_pub !== false ) {
 			if ( $acf ) {
-				$blob = get_field( 'spx_img_brand_blob', 'user_' . $uid );
-				if ( is_array( $blob ) && ! empty( $blob['url'] ) ) {
-					$photo = esc_url_raw( (string) $blob['url'] );
-				} elseif ( is_string( $blob ) && '' !== $blob ) {
-					$photo = esc_url_raw( $blob );
-				}
+				$img  = AcfHelper::resolve_image( get_field( 'spx_img_brand_blob', 'user_' . $uid ) );
+				$photo = $img['url'];
 			}
 			// Fall back to Gravatar only when no ACF image is available.
 			if ( '' === $photo ) {
