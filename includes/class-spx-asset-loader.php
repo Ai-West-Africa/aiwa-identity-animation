@@ -355,7 +355,7 @@ final class AssetLoader {
 	 *   - Email:    WP user_email (canonical).
 	 *   - Website:  WP user_url.
 	 *   - Address:  ACF spx_loc_* fields.
-	 *   - Photo:    ACF spx_img_brand_blob → Gravatar fallback (only when spx_state_img_pub is truthy).
+	 *   - Photo:    ACF spx_img_brand_blob → Gravatar fallback (unless spx_state_img_pub is explicitly false).
 	 *
 	 * @param  \WP_User $user            The card owner.
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
