@@ -876,7 +876,7 @@ const qrEl = document.getElementById('spax-photon-qr');
 if (qrEl) qrEl.focus();
 };
 
-fs.addEventListener('click', close, { passive: true });
+fs.addEventListener('click', close);
 fs.addEventListener('keydown', (e) => {
 if (e.key === 'Escape') { e.stopPropagation(); close(); return; }
 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); close(); }
@@ -902,8 +902,10 @@ return wa ? String(wa.val || '').trim() : '';
 
 /**
  * Build a wa.me deep-link URL from the configured WhatsApp number.
- * Strips all non-digit characters so the URL conforms to the wa.me format
- * (international number, digits only, no leading +).
+ * Strips all non-digit characters (spaces, dashes, parentheses, leading +)
+ * so the URL conforms to the wa.me format.  The stored value must already
+ * include the full international country code (e.g. "+27821234567" →
+ * "https://wa.me/27821234567").
  * Returns an empty string when no WhatsApp channel is configured.
  */
 _whatsappUrl() {
