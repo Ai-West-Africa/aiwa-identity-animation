@@ -870,19 +870,118 @@ correctLevel: QRCode.CorrectLevel.M
 });
 });
 
+const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+const inertSiblings = [];
+const focusableSelector = [
+'a[href]',
+'area[href]',
+'button:not([disabled])',
+'input:not([disabled]):not([type="hidden"])',
+'select:not([disabled])',
+'textarea:not([disabled])',
+'iframe',
+'object',
+'embed',
+'[contenteditable="true"]',
+'[tabindex]:not([tabindex="-1"])'
+].join(', ');
+
+const getFocusableElements = () => Array.from(fs.querySelectorAll(focusableSelector)).filter((el) => {
+if (!(el instanceof HTMLElement)) {
+return false;
+}
+
+if (el.hidden) {
+return false;
+}
+
+if (window.getComputedStyle(el).display === 'none' || window.getComputedStyle(el).visibility === 'hidden') {
+return false;
+}
+
+return true;
+});
+
+const setBackgroundInert = () => {
+Array.from(document.body.children).forEach((child) => {
+if (!(child instanceof HTMLElement) || child === fs) {
+return;
+}
+
+inertSiblings.push({
+element: child,
+hadInert: child.inert
+});
+child.inert = true;
+});
+};
+
+const restoreBackgroundInert = () => {
+inertSiblings.forEach(({ element, hadInert }) => {
+element.inert = hadInert;
+});
+};
+
 const close = () => {
+restoreBackgroundInert();
 fs.remove();
+
 const qrEl = document.getElementById('spax-photon-qr');
-if (qrEl) qrEl.focus();
+if (qrEl instanceof HTMLElement) {
+qrEl.focus();
+return;
+}
+
+if (previouslyFocused) {
+previouslyFocused.focus();
+}
 };
 
 fs.addEventListener('click', close);
 fs.addEventListener('keydown', (e) => {
-if (e.key === 'Escape') { e.stopPropagation(); close(); return; }
-if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); close(); }
+if (e.key === 'Escape') {
+e.stopPropagation();
+close();
+return;
+}
+
+if (e.key === 'Enter' || e.key === ' ') {
+e.preventDefault();
+close();
+return;
+}
+
+if (e.key === 'Tab') {
+const focusableElements = getFocusableElements();
+
+if (focusableElements.length === 0) {
+e.preventDefault();
+fs.focus();
+return;
+}
+
+const firstElement = focusableElements[0];
+const lastElement = focusableElements[focusableElements.length - 1];
+const activeElement = document.activeElement;
+
+if (e.shiftKey) {
+if (activeElement === firstElement || activeElement === fs) {
+e.preventDefault();
+lastElement.focus();
+}
+
+return;
+}
+
+if (activeElement === lastElement) {
+e.preventDefault();
+firstElement.focus();
+}
+}
 });
 
 document.body.appendChild(fs);
+setBackgroundInert();
 fs.focus();
 }
 
