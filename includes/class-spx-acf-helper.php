@@ -36,11 +36,11 @@ final class AcfHelper {
 	 */
 	public static function resolve_image( mixed $blob ): array {
 		if ( is_array( $blob ) && ! empty( $blob['url'] ) ) {
+			$mime = sanitize_mime_type( (string) ( $blob['mime_type'] ?? 'image/jpeg' ) );
+
 			return [
 				'url'    => esc_url_raw( (string) $blob['url'] ),
-				'mime'   => '' !== sanitize_mime_type( (string) ( $blob['mime_type'] ?? 'image/jpeg' ) )
-					? sanitize_mime_type( (string) ( $blob['mime_type'] ?? 'image/jpeg' ) )
-					: 'image/jpeg',
+				'mime'   => '' !== $mime ? $mime : 'image/jpeg',
 				'width'  => absint( $blob['width'] ?? 0 ),
 				'height' => absint( $blob['height'] ?? 0 ),
 			];
