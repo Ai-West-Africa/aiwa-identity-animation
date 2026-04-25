@@ -861,11 +861,27 @@ fs.appendChild(label);
 
 this.ensureQRCodeLib(() => {
 inner.innerHTML = '';
+
+const viewport = window.visualViewport || {
+width: window.innerWidth,
+height: window.innerHeight
+};
+const overlayPaddingPx = 24 * 2;
+const reservedVerticalSpacePx = 96;
+const maxQrSizePx = 300;
+const minQrSizePx = 160;
+const availableWidthPx = Math.max(minQrSizePx, Math.floor(viewport.width - overlayPaddingPx));
+const availableHeightPx = Math.max(minQrSizePx, Math.floor(viewport.height - overlayPaddingPx - reservedVerticalSpacePx));
+const qrSizePx = Math.max(
+minQrSizePx,
+Math.min(maxQrSizePx, availableWidthPx, availableHeightPx)
+);
+
 // eslint-disable-next-line no-undef
 new QRCode(inner, {
 text: this.generateVCard(),
-width: 300,
-height: 300,
+width: qrSizePx,
+height: qrSizePx,
 correctLevel: QRCode.CorrectLevel.M
 });
 });
