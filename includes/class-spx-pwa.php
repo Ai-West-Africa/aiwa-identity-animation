@@ -220,13 +220,10 @@ final class PwaController {
 		}
 
 		// ── App name ─────────────────────────────────────────────────────────────
-		// Priority: spx_org_name → billing_company (WooCommerce) → display_name.
+		// Priority: ACF spx_org_name → WP display_name.
 		$app_name = '';
 		if ( function_exists( 'get_field' ) ) {
 			$app_name = (string) ( get_field( 'spx_org_name', 'user_' . $uid ) ?: '' );
-		}
-		if ( '' === $app_name && class_exists( 'WooCommerce' ) ) {
-			$app_name = (string) ( get_user_meta( $uid, 'billing_company', true ) ?: '' );
 		}
 		if ( '' === $app_name ) {
 			$app_name = $user->display_name;
@@ -249,28 +246,18 @@ final class PwaController {
 		$icon_height = 0;
 
 		if ( function_exists( 'get_field' ) ) {
-			$blob = get_field( 'spx_img_brand_blob', 'user_' . $uid );
-			if ( is_array( $blob ) && ! empty( $blob['url'] ) ) {
-				$icon_url    = esc_url_raw( (string) $blob['url'] );
-				$icon_mime   = sanitize_mime_type( (string) ( $blob['mime_type'] ?? 'image/jpeg' ) );
-				$icon_width  = absint( $blob['width'] ?? 0 );
-				$icon_height = absint( $blob['height'] ?? 0 );
-			} elseif ( is_string( $blob ) && '' !== $blob ) {
-				$icon_url       = esc_url_raw( $blob );
-				$filetype_check = wp_check_filetype( $blob );
-				$icon_mime      = ! empty( $filetype_check['type'] )
-					? sanitize_mime_type( $filetype_check['type'] )
-					: 'image/jpeg';
-			}
+			$img         = AcfHelper::resolve_image( get_field( 'spx_img_brand_blob', 'user_' . $uid ) );
+			$icon_url    = $img['url'];
+			$icon_mime   = $img['mime'];
+			$icon_width  = $img['width'];
+			$icon_height = $img['height'];
 		}
 		if ( '' === $icon_url ) {
 			$scf_logo = (string) ( get_user_meta( $uid, 'scf_business_logo_url', true ) ?: '' );
 			if ( '' !== $scf_logo ) {
-				$icon_url       = esc_url_raw( $scf_logo );
-				$filetype_check = wp_check_filetype( $scf_logo );
-				$icon_mime      = ! empty( $filetype_check['type'] )
-					? sanitize_mime_type( $filetype_check['type'] )
-					: 'image/jpeg';
+				$img       = AcfHelper::resolve_image( $scf_logo );
+				$icon_url  = $img['url'];
+				$icon_mime = $img['mime'];
 			}
 		}
 		if ( '' === $icon_url ) {
