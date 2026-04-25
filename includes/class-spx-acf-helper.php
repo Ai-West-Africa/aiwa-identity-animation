@@ -48,11 +48,11 @@ final class AcfHelper {
 
 		if ( is_string( $blob ) && '' !== $blob ) {
 			$filetype = wp_check_filetype( $blob );
+			$mime     = sanitize_mime_type( (string) ( $filetype['type'] ?? 'image/jpeg' ) );
+
 			return [
 				'url'    => esc_url_raw( $blob ),
-				'mime'   => ! empty( $filetype['type'] )
-					? sanitize_mime_type( $filetype['type'] )
-					: 'image/jpeg',
+				'mime'   => '' !== $mime ? $mime : 'image/jpeg',
 				'width'  => 0,
 				'height' => 0,
 			];
