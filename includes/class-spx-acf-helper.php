@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   – 'url'    → plain URL string
  *
  * @package Starisian\Sparxstar\Photon
- * @since   1.1.0
+ * @since   0.5.0
  */
 final class AcfHelper {
 
