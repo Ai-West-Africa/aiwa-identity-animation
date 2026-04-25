@@ -463,7 +463,13 @@ final class AssetLoader {
 		} else {
 			$img_pub = null;
 		}
-		if ( $img_pub !== false ) {
+
+		// ACF true_false fields commonly return false, 0, '0', 1, or '1'.
+		// Treat explicit falsey opt-out values as non-public while preserving
+		// the existing default-on behavior for null/unset values.
+		$is_photo_public = null === $img_pub || ( false !== $img_pub && 0 !== $img_pub && '0' !== $img_pub );
+
+		if ( $is_photo_public ) {
 			if ( $acf ) {
 				$img  = AcfHelper::resolve_image( get_field( 'spx_img_brand_blob', 'user_' . $uid ) );
 				$photo = $img['url'];
