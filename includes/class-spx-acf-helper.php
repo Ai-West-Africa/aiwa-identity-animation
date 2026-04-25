@@ -38,7 +38,9 @@ final class AcfHelper {
 		if ( is_array( $blob ) && ! empty( $blob['url'] ) ) {
 			return [
 				'url'    => esc_url_raw( (string) $blob['url'] ),
-				'mime'   => sanitize_mime_type( (string) ( $blob['mime_type'] ?? 'image/jpeg' ) ),
+				'mime'   => '' !== sanitize_mime_type( (string) ( $blob['mime_type'] ?? 'image/jpeg' ) )
+					? sanitize_mime_type( (string) ( $blob['mime_type'] ?? 'image/jpeg' ) )
+					: 'image/jpeg',
 				'width'  => absint( $blob['width'] ?? 0 ),
 				'height' => absint( $blob['height'] ?? 0 ),
 			];
