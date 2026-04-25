@@ -74,8 +74,11 @@ sensorAutoDisable: null
 
 this.boundOrientationHandler = null;
 this.boundMotionHandler      = null;
-this.wakeLock  = null;
-this.lastFocus = null;
+this.wakeLock    = null;
+this.lastFocus   = null;
+// Registered close-handler for the fullscreen QR overlay (if open).
+// Stored here so closeCard() can invoke it for proper inert + focus cleanup.
+this._qrFsClose  = null;
 // Active user for the current card display.
 this.activeUid = defaultUid;
 
@@ -556,9 +559,11 @@ closeCard() {
 const overlay = document.getElementById('spax-photon-card-overlay');
 if (!overlay) return;
 
-// Close fullscreen QR if open so it doesn't orphan above the page.
-const fsQr = document.getElementById('spax-photon-qr-fs');
-if (fsQr) fsQr.remove();
+// If the fullscreen QR overlay is open, call its registered close handler
+// so inert-state restoration and focus cleanup always run.
+if (this._qrFsClose) {
+this._qrFsClose();
+}
 
 document.body.classList.remove('spax-photon-card-active');
 document.body.style.top = '';
@@ -861,28 +866,147 @@ fs.appendChild(label);
 
 this.ensureQRCodeLib(() => {
 inner.innerHTML = '';
+
+const viewport = window.visualViewport || {
+width: window.innerWidth,
+height: window.innerHeight
+};
+const overlayPaddingPx = 24 * 2;
+const reservedVerticalSpacePx = 96;
+const maxQrSizePx = 300;
+const minQrSizePx = 160;
+const availableWidthPx = Math.max(minQrSizePx, Math.floor(viewport.width - overlayPaddingPx));
+const availableHeightPx = Math.max(minQrSizePx, Math.floor(viewport.height - overlayPaddingPx - reservedVerticalSpacePx));
+const qrSizePx = Math.max(
+minQrSizePx,
+Math.min(maxQrSizePx, availableWidthPx, availableHeightPx)
+);
+
 // eslint-disable-next-line no-undef
 new QRCode(inner, {
 text: this.generateVCard(),
-width: 300,
-height: 300,
+width: qrSizePx,
+height: qrSizePx,
 correctLevel: QRCode.CorrectLevel.M
 });
 });
 
-const close = () => {
-fs.remove();
-const qrEl = document.getElementById('spax-photon-qr');
-if (qrEl) qrEl.focus();
+const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+const inertSiblings = [];
+const focusableSelector = [
+'a[href]',
+'area[href]',
+'button:not([disabled])',
+'input:not([disabled]):not([type="hidden"])',
+'select:not([disabled])',
+'textarea:not([disabled])',
+'iframe',
+'object',
+'embed',
+'[contenteditable="true"]',
+'[tabindex]:not([tabindex="-1"])'
+].join(', ');
+
+const getFocusableElements = () => Array.from(fs.querySelectorAll(focusableSelector)).filter((el) => {
+if (!(el instanceof HTMLElement)) {
+return false;
+}
+
+if (el.hidden) {
+return false;
+}
+
+if (window.getComputedStyle(el).display === 'none' || window.getComputedStyle(el).visibility === 'hidden') {
+return false;
+}
+
+return true;
+});
+
+const setBackgroundInert = () => {
+Array.from(document.body.children).forEach((child) => {
+if (!(child instanceof HTMLElement) || child === fs) {
+return;
+}
+
+inertSiblings.push({
+element: child,
+hadInert: child.inert
+});
+child.inert = true;
+});
 };
+
+const restoreBackgroundInert = () => {
+inertSiblings.forEach(({ element, hadInert }) => {
+element.inert = hadInert;
+});
+};
+
+const close = () => {
+this._qrFsClose = null;
+restoreBackgroundInert();
+fs.remove();
+
+const qrEl = document.getElementById('spax-photon-qr');
+if (qrEl instanceof HTMLElement) {
+qrEl.focus();
+return;
+}
+
+if (previouslyFocused) {
+previouslyFocused.focus();
+}
+};
+
+// Store handler on the instance so closeCard() can invoke it for proper cleanup.
+this._qrFsClose = close;
 
 fs.addEventListener('click', close);
 fs.addEventListener('keydown', (e) => {
-if (e.key === 'Escape') { e.stopPropagation(); close(); return; }
-if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); close(); }
+if (e.key === 'Escape') {
+e.stopPropagation();
+close();
+return;
+}
+
+if (e.key === 'Enter' || e.key === ' ') {
+e.preventDefault();
+close();
+return;
+}
+
+if (e.key === 'Tab') {
+const focusableElements = getFocusableElements();
+
+if (focusableElements.length === 0) {
+e.preventDefault();
+fs.focus();
+return;
+}
+
+const firstElement = focusableElements[0];
+const lastElement = focusableElements[focusableElements.length - 1];
+const activeElement = document.activeElement;
+
+if (e.shiftKey) {
+if (activeElement === firstElement || activeElement === fs) {
+e.preventDefault();
+lastElement.focus();
+}
+
+return;
+}
+
+if (activeElement === lastElement) {
+e.preventDefault();
+firstElement.focus();
+}
+}
 });
 
 document.body.appendChild(fs);
+setBackgroundInert();
 fs.focus();
 }
 

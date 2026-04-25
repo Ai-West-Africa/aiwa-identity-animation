@@ -74,8 +74,11 @@ sensorAutoDisable: null
 
 this.boundOrientationHandler = null;
 this.boundMotionHandler      = null;
-this.wakeLock  = null;
-this.lastFocus = null;
+this.wakeLock    = null;
+this.lastFocus   = null;
+// Registered close-handler for the fullscreen QR overlay (if open).
+// Stored here so closeCard() can invoke it for proper inert + focus cleanup.
+this._qrFsClose  = null;
 // Active user for the current card display.
 this.activeUid = defaultUid;
 
@@ -556,9 +559,11 @@ closeCard() {
 const overlay = document.getElementById('spax-photon-card-overlay');
 if (!overlay) return;
 
-// Close fullscreen QR if open so it doesn't orphan above the page.
-const fsQr = document.getElementById('spax-photon-qr-fs');
-if (fsQr) fsQr.remove();
+// If the fullscreen QR overlay is open, call its registered close handler
+// so inert-state restoration and focus cleanup always run.
+if (this._qrFsClose) {
+this._qrFsClose();
+}
 
 document.body.classList.remove('spax-photon-card-active');
 document.body.style.top = '';
@@ -939,6 +944,7 @@ element.inert = hadInert;
 };
 
 const close = () => {
+this._qrFsClose = null;
 restoreBackgroundInert();
 fs.remove();
 
@@ -952,6 +958,9 @@ if (previouslyFocused) {
 previouslyFocused.focus();
 }
 };
+
+// Store handler on the instance so closeCard() can invoke it for proper cleanup.
+this._qrFsClose = close;
 
 fs.addEventListener('click', close);
 fs.addEventListener('keydown', (e) => {
