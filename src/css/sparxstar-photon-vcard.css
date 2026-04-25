@@ -365,6 +365,10 @@ box-sizing: border-box;
 outline: none;
 }
 
+#spax-photon-qr-fs:focus-visible {
+outline: 3px solid #0062ff;
+outline-offset: -6px;
+}
 #spax-photon-qr-fs-inner {
 line-height: 0;
 border-radius: 4px;
