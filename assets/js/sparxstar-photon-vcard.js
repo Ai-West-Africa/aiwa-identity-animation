@@ -472,7 +472,7 @@ overlay.innerHTML = `
   <div class="spx_card_wrapper">
     <div class="spx_card_content">
       ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="56" height="56" loading="eager" decoding="async">` : ''}
-      <div id="spax-photon-qr" class="spx_qr_code" role="button" tabindex="0" aria-label="Tap to expand QR code fullscreen"></div>
+      <div id="spax-photon-qr" class="spx_qr_code" role="button" tabindex="0" aria-label="Scan to save contact. Tap to expand QR code fullscreen."></div>
       <span class="spx_scan_label" aria-hidden="true">Scan to save contact</span>
       ${company ? `<p class="spx_company">${company}</p>` : ''}
       ${name    ? `<p class="spx_name">${name}</p>` : ''}
@@ -560,8 +560,9 @@ const overlay = document.getElementById('spax-photon-card-overlay');
 if (!overlay) return;
 
 // If the fullscreen QR overlay is open, call its registered close handler
-// so inert-state restoration and focus cleanup always run without restoring
-// focus to an element inside a card that is also being dismissed.
+// so inert-state restoration and cleanup always run before the card closes.
+// Suppress focus restoration here — closeCard() restores focus to the
+// original opener exactly once after the card is torn down.
 if (this._qrFsClose) {
 this._qrFsClose({ restoreFocus: false });
 }
@@ -951,10 +952,12 @@ element.inert = hadInert;
 });
 };
 
-const close = () => {
+const close = ({ restoreFocus = true } = {}) => {
 this._qrFsClose = null;
 restoreBackgroundInert();
 fs.remove();
+
+if (!restoreFocus) return;
 
 const qrEl = document.getElementById('spax-photon-qr');
 if (qrEl instanceof HTMLElement) {

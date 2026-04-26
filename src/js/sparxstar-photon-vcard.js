@@ -561,8 +561,10 @@ if (!overlay) return;
 
 // If the fullscreen QR overlay is open, call its registered close handler
 // so inert-state restoration and cleanup always run before the card closes.
+// Suppress focus restoration here — closeCard() restores focus to the
+// original opener exactly once after the card is torn down.
 if (this._qrFsClose) {
-this._qrFsClose();
+this._qrFsClose({ restoreFocus: false });
 }
 
 document.body.classList.remove('spax-photon-card-active');
@@ -950,10 +952,12 @@ element.inert = hadInert;
 });
 };
 
-const close = () => {
+const close = ({ restoreFocus = true } = {}) => {
 this._qrFsClose = null;
 restoreBackgroundInert();
 fs.remove();
+
+if (!restoreFocus) return;
 
 const qrEl = document.getElementById('spax-photon-qr');
 if (qrEl instanceof HTMLElement) {
