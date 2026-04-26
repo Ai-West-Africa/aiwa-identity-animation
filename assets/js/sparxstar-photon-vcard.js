@@ -840,6 +840,13 @@ console.warn('SpxPhotonVCard: QRCode library not found. Ensure qrcode.min.js is 
 openQRFullscreen() {
 if (document.getElementById('spax-photon-qr-fs')) return;
 
+if (!window.QRCode) {
+if (typeof console !== 'undefined') {
+console.warn('SpxPhotonVCard: QRCode library not available — fullscreen QR aborted.');
+}
+return;
+}
+
 const fs = document.createElement('div');
 fs.id = 'spax-photon-qr-fs';
 fs.setAttribute('role', 'dialog');
