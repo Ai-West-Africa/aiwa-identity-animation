@@ -973,7 +973,7 @@ previouslyFocused.focus();
 // Store handler on the instance so closeCard() can invoke it for proper cleanup.
 this._qrFsClose = close;
 
-fs.addEventListener('click', close);
+fs.addEventListener('click', () => close());
 fs.addEventListener('keydown', (e) => {
 if (e.key === 'Escape') {
 e.stopPropagation();
