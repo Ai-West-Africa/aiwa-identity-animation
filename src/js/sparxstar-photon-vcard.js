@@ -472,7 +472,7 @@ overlay.innerHTML = `
   <div class="spx_card_wrapper">
     <div class="spx_card_content">
       ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="56" height="56" loading="eager" decoding="async">` : ''}
-      <div id="spax-photon-qr" class="spx_qr_code" role="button" tabindex="0" aria-label="Tap to expand QR code fullscreen"></div>
+      <div id="spax-photon-qr" class="spx_qr_code" role="button" tabindex="0" aria-label="Scan to save contact. Tap to expand QR code fullscreen."></div>
       <span class="spx_scan_label" aria-hidden="true">Scan to save contact</span>
       ${company ? `<p class="spx_company">${company}</p>` : ''}
       ${name    ? `<p class="spx_name">${name}</p>` : ''}
