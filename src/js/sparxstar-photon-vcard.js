@@ -538,10 +538,10 @@ if (closeBtn) closeBtn.addEventListener('click', () => this.closeCard(),     { p
 
 // QR tap → fullscreen mode.
 if (qrEl) {
-qrEl.addEventListener('click', () => this.openQRFullscreen(), { passive: true });
-qrEl.addEventListener('keydown', (e) => {
-if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openQRFullscreen(); }
-});
+    qrEl.addEventListener('click', () => this.openQRFullscreen(), { passive: true });
+    qrEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openQRFullscreen(); }
+    });
 }
 
 // Hide broken profile image without an inline onerror (CSP-safe).
