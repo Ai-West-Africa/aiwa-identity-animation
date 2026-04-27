@@ -1,4 +1,4 @@
-# Proprietary License
+# Starisian Technologies Proprietary License
 
 Copyright (c) 2025 Starisian Technologies. All rights reserved.
 
