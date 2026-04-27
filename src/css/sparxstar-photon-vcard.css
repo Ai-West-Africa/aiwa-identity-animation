@@ -147,6 +147,11 @@ background: linear-gradient(135deg, #1a1d24, #0f1115);
 }
 
 /* ---- QR code ---- */
+@keyframes spx_qr_pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0,242,255,0.25), 0 0 40px rgba(112,0,255,0.2); }
+    50%      { box-shadow: 0 0 35px rgba(0,242,255,0.45), 0 0 60px rgba(112,0,255,0.35); }
+}
+
 .spx_qr_code {
 width: 180px;
 height: 180px;
@@ -156,12 +161,11 @@ flex-shrink: 0;
 cursor: pointer;
 border-radius: 12px;
 overflow: hidden;
-box-shadow:
-    0 0 20px rgba(0,242,255,0.25),
-    0 0 40px rgba(112,0,255,0.2);
+animation: spx_qr_pulse 4s ease-in-out infinite;
 }
 
 .spx_qr_code:hover {
+animation-play-state: paused;
 box-shadow:
     0 0 24px rgba(0,242,255,0.4),
     0 0 50px rgba(112,0,255,0.3);
@@ -452,4 +456,5 @@ to   { transform: translateY(0);    opacity: 1; }
 .spx_card_wrapper::before      { animation: none; }
 #spax-photon-sensor-grant,
 #spax-photon-open-btn          { animation: none; transition: none; }
+.spx_qr_code                   { animation: none; }
 }
