@@ -24,7 +24,8 @@ jobs:
           cache: 'npm'
 
       - name: Install build dependencies
-        run: npm ci
+        run: |
+          for i in 1 2 3; do npm ci && break || ([ $i -lt 3 ] && sleep 15) || exit 1; done
 
       - name: Extract version from tag
         id: version
