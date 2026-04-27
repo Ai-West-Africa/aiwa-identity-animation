@@ -453,6 +453,16 @@ primaryPhoneHtml = `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}
 
 const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : '';
 
+// Initials fallback: up to 2 characters from first + last name token.
+const initials = (this.d.name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0)
+    .slice(0, 2)
+    .map(w => w.charAt(0))
+    .join('')
+    .toUpperCase() || '?';
+
 const canSendFile = this._canSendFile();
 const canShare    = this._canShare();
 
@@ -471,7 +481,9 @@ overlay.innerHTML = `
 <div class="spx_vcard_page_wrapper">
   <div class="spx_card_wrapper">
     <div class="spx_card_content">
-      ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="90" height="90" loading="eager" decoding="async">` : ''}
+      ${photoSrc
+        ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="90" height="90" loading="eager" decoding="async">`
+        : `<div class="spx_user_photo spx_user_initials" aria-hidden="true">${initials}</div>`}
       ${name    ? `<p class="spx_name">${name}</p>` : ''}
       ${title   ? `<p class="spx_title">${title}</p>` : ''}
       ${company ? `<p class="spx_company">${company}</p>` : ''}
