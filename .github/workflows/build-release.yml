@@ -3,7 +3,7 @@ name: Build & Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 permissions:
   contents: write
@@ -20,8 +20,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: "npm"
 
       - name: Install build dependencies
         run: |
@@ -87,8 +87,8 @@ jobs:
           echo "SHA256=$(cat "${{ env.ARCHIVE }}.sha256")" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
-        # uses: softprops/action-gh-release@v2
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        # uses: softprops/action-gh-release@v2.6.2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           name: "SPARXSTAR Photon VCard v${{ steps.version.outputs.VERSION }}"
           body: |
