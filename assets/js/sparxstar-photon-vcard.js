@@ -483,7 +483,7 @@ overlay.innerHTML = `
     <div class="spx_card_content">
       ${photoSrc
         ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="90" height="90" loading="eager" decoding="async">`
-        : `<div class="spx_user_photo spx_user_initials" role="img" aria-label="${this.escAttr((this.d.name ? this.d.name + ' initials' : 'User initials'))}">${initials}</div>`}
+        : `<div class="spx_user_photo spx_user_initials" role="img" aria-label="${this.escAttr((this.d.name ? this.d.name + ' initials' : 'User initials'))}">${this.esc(initials)}</div>`}
       ${name    ? `<p class="spx_name">${name}</p>` : ''}
       ${title   ? `<p class="spx_title">${title}</p>` : ''}
       ${company ? `<p class="spx_company">${company}</p>` : ''}
@@ -829,8 +829,8 @@ container.innerHTML = '';
 // eslint-disable-next-line no-undef
 new QRCode(container, {
 text: this.generateVCard(),
-width: 176,
-height: 176,
+width: 180,
+height: 180,
 correctLevel: QRCode.CorrectLevel.M
 });
 });
