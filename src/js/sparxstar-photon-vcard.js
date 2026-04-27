@@ -453,6 +453,16 @@ primaryPhoneHtml = `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}
 
 const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : '';
 
+// Initials fallback: up to 2 characters from first + last name token.
+const initials = (this.d.name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0)
+    .slice(0, 2)
+    .map(w => w.charAt(0))
+    .join('')
+    .toUpperCase() || '?';
+
 const canSendFile = this._canSendFile();
 const canShare    = this._canShare();
 
@@ -471,23 +481,24 @@ overlay.innerHTML = `
 <div class="spx_vcard_page_wrapper">
   <div class="spx_card_wrapper">
     <div class="spx_card_content">
-      ${photoSrc ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="56" height="56" loading="eager" decoding="async">` : ''}
-      <div id="spax-photon-qr" class="spx_qr_code" role="button" tabindex="0" aria-label="Scan to save contact. Tap to expand QR code fullscreen."></div>
-      <span class="spx_scan_label" aria-hidden="true">Scan to save contact</span>
-      ${company ? `<p class="spx_company">${company}</p>` : ''}
+      ${photoSrc
+        ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || '')}" width="90" height="90" loading="eager" decoding="async">`
+        : `<div class="spx_user_photo spx_user_initials" role="img" aria-label="${this.escAttr((this.d.name ? this.d.name + ' initials' : 'User initials'))}">${this.esc(initials)}</div>`}
       ${name    ? `<p class="spx_name">${name}</p>` : ''}
       ${title   ? `<p class="spx_title">${title}</p>` : ''}
+      ${company ? `<p class="spx_company">${company}</p>` : ''}
       ${primaryPhoneHtml}
+      <div id="spax-photon-qr" class="spx_qr_code" role="button" tabindex="0" aria-label="Scan to save contact. Tap to expand QR code fullscreen."></div>
       <div class="spx_action_bar" role="group" aria-label="Business card actions">
         <div class="spx_action_grid">
           ${waUrl
             ? `<a class="spx_action_item spx_action_item--whatsapp" href="${this.escAttr(waUrl)}" target="_blank" rel="noopener noreferrer" id="spax-photon-wa-btn" aria-label="Chat on WhatsApp">${iconWhatsApp}</a>`
             : canSendFile
               ? `<button type="button" class="spx_action_item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}</button>`
-              : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
+              : ''}
           ${canShare
             ? `<button type="button" class="spx_action_item" id="spax-photon-share-btn" aria-label="Share Link">${iconShare}</button>`
-            : `<span class="spx_action_placeholder" aria-hidden="true"></span>`}
+            : ''}
           <button type="button" class="spx_action_item" id="spax-photon-save-btn" aria-label="Save Contact">${iconSave}</button>
         </div>
       </div>
@@ -818,8 +829,8 @@ container.innerHTML = '';
 // eslint-disable-next-line no-undef
 new QRCode(container, {
 text: this.generateVCard(),
-width: 176,
-height: 176,
+width: 180,
+height: 180,
 correctLevel: QRCode.CorrectLevel.M
 });
 });
@@ -973,7 +984,7 @@ previouslyFocused.focus();
 // Store handler on the instance so closeCard() can invoke it for proper cleanup.
 this._qrFsClose = close;
 
-fs.addEventListener('click', () => close());
+fs.addEventListener('click', close);
 fs.addEventListener('keydown', (e) => {
 if (e.key === 'Escape') {
 e.stopPropagation();
