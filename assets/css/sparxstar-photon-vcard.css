@@ -99,111 +99,139 @@ animation: spx_rotate_simple 4s linear infinite;
     height: 100%;
 }
 
-/* ---- White inner card ---- */
+/* ---- Dark premium inner card ---- */
 .spx_card_content {
 position: absolute;
 top: 3px; left: 3px; right: 3px; bottom: 3px;
-background: #ffffff;
+background: linear-gradient(145deg, #0f1115, #1a1d24);
 border-radius: 10px;
 z-index: 2;
 display: flex;
 flex-direction: column;
 align-items: center;
 justify-content: flex-start;
-padding: 20px 20px 62px;
+padding: 24px 20px 90px;
 text-align: center;
 overflow: hidden;
-gap: 4px;
+color: #ffffff;
+box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+gap: 0;
 }
 
-/* ---- Profile photo inside white card ---- */
+/* ---- Profile photo inside dark card ---- */
 .spx_user_photo {
-width: 56px;
-height: 56px;
+width: 90px;
+height: 90px;
 border-radius: 50%;
 object-fit: cover;
-border: 2px solid rgba(0, 0, 0, 0.1);
-margin-bottom: 6px;
+border: 2px solid rgba(255,255,255,0.15);
+margin: 10px 0 14px;
 flex-shrink: 0;
+background: #111;
+box-shadow:
+    0 0 0 2px rgba(0,242,255,0.6),
+    0 0 18px rgba(0,242,255,0.4),
+    0 0 30px rgba(112,0,255,0.25);
 }
 
 /* ---- QR code ---- */
 .spx_qr_code {
-width: 160px;
-height: 160px;
-margin-bottom: 6px;
+width: 180px;
+height: 180px;
+margin-top: auto;
+margin-bottom: 60px;
 flex-shrink: 0;
 cursor: pointer;
-border-radius: 4px;
-transition: box-shadow 0.15s ease;
+border-radius: 12px;
+overflow: hidden;
+box-shadow:
+    0 0 20px rgba(0,242,255,0.25),
+    0 0 40px rgba(112,0,255,0.2);
 }
 
 .spx_qr_code:hover {
-box-shadow: 0 0 0 3px rgba(0, 98, 255, 0.25);
+box-shadow:
+    0 0 24px rgba(0,242,255,0.4),
+    0 0 50px rgba(112,0,255,0.3);
 }
 
 .spx_qr_code:focus-visible {
-outline: 2px solid rgba(0, 98, 255, 0.6);
+outline: 2px solid rgba(0, 242, 255, 0.7);
 outline-offset: 3px;
-border-radius: 4px;
+border-radius: 12px;
 }
 
 .spx_scan_label {
-font-size: 10px;
-text-transform: uppercase;
-color: #999;
-letter-spacing: 2px;
-margin-bottom: 8px;
+display: none;
 }
 
 /* ---- Identity text ---- */
-.spx_name    { font-size: 22px; font-weight: 800; color: #111; margin: 0; line-height: 1.2; }
-.spx_title   { font-size: 13px; color: #666; margin: 2px 0; }
-.spx_company { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #111; letter-spacing: 1px; }
+.spx_name {
+font-size: 26px;
+font-weight: 900;
+letter-spacing: -0.5px;
+margin: 6px 0;
+line-height: 1.2;
+background: linear-gradient(90deg, #00f2ff, #7000ff);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+}
+.spx_title   { font-size: 14px; color: rgba(255,255,255,0.75); margin: 2px 0 10px; }
+.spx_company { font-size: 12px; font-weight: 700; text-transform: uppercase; color: rgba(255,255,255,0.5); letter-spacing: 2px; margin-bottom: 10px; }
 
 .spx_phone_link {
-margin-top: 10px;
+margin-top: 6px;
 font-size: 16px;
 font-weight: 600;
-color: #0062ff;
+color: #00f2ff;
 text-decoration: none;
 }
 
-.spx_phone_link:hover { text-decoration: underline; }
+.spx_phone_link:hover { text-decoration: none; opacity: 0.8; }
 
-/* ---- Bottom action bar (inside white card) ---- */
+/* ---- Bottom action bar (inside dark card) ---- */
 .spx_action_bar {
 position: absolute;
-bottom: 0;
-left: 0;
-right: 0;
-background: #ffffff;
-border-top: 1px solid #e5e5ea;
-border-radius: 0 0 10px 10px;
+bottom: 14px;
+left: 16px;
+right: 16px;
+background: transparent;
+border-top: none;
+border-radius: 0;
 }
 
 .spx_action_grid {
-display: grid;
-grid-template-columns: repeat(3, 1fr);
-padding: 6px 0;
+display: flex;
+justify-content: space-between;
+gap: 8px;
+padding: 0;
 }
 
 .spx_action_item {
-background: transparent;
-border: none;
+flex: 1;
+height: 44px;
+border-radius: 10px;
+border: 1px solid rgba(255,255,255,0.1);
+background: rgba(255,255,255,0.03);
 color: #8e8e93;
 display: flex;
-flex-direction: column;
+flex-direction: row;
 align-items: center;
 justify-content: center;
 cursor: pointer;
-padding: 8px 0;
+padding: 0;
 min-height: 44px;
-transition: color 0.18s ease;
+transition: all 0.2s ease;
 text-decoration: none;
 }
 
-.spx_action_item:hover  { color: #0062ff; }
+.spx_action_item:hover {
+background: rgba(0,242,255,0.1);
+color: #00f2ff;
+border-color: rgba(0,242,255,0.4);
+}
+
+.spx_action_item:active { transform: scale(0.92); }
 
 .spx_action_item svg {
 width: 22px;
@@ -216,17 +244,13 @@ stroke-linejoin: round;
 }
 
 .spx_action_item:focus-visible {
-outline: 2px solid rgba(0, 98, 255, 0.5);
+outline: 2px solid rgba(0, 242, 255, 0.6);
 outline-offset: 2px;
-border-radius: 4px;
+border-radius: 10px;
 }
 
 .spx_action_placeholder {
-display: inline-flex;
-min-height: 44px;
-visibility: hidden;
-pointer-events: none;
-cursor: default;
+display: none;
 }
 
 /* ---- Close button (top-right of overlay) ---- */
