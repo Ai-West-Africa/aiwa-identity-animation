@@ -1,0 +1,16 @@
+parameters:
+    level: 5
+    paths:
+        - sparxstar-photon-vcard.php
+        - uninstall.php
+        - includes
+    excludePaths:
+        - vendor
+        - node_modules
+    phpVersion: 80200
+    treatPhpDocTypesAsCertain: false
+
+    # WordPress stubs provided by szepeviktor/phpstan-wordpress
+    bootstrapFiles: []
+
+    ignoreErrors: []

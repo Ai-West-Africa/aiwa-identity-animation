@@ -40,9 +40,6 @@ jobs:
           sed -i "s/define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '[^']*' )/define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '${VERSION}' )/" sparxstar-photon-vcard.php
           sed -i "s/^\*\*Version:\*\* .*/\*\*Version:\*\* ${VERSION}/" README.md
 
-      - name: Copy unminified assets
-        run: npm run copy:assets
-
       - name: Minify CSS
         run: npm run build:css
 

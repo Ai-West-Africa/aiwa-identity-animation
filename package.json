@@ -3,17 +3,31 @@
   "version": "1.0.0",
   "description": "SPARXSTAR Photon VCard — WordPress plugin build tooling",
   "private": true,
+  "type": "module",
   "scripts": {
     "build:css": "cleancss -o assets/css/sparxstar-photon-vcard.min.css src/css/sparxstar-photon-vcard.css",
     "build:js": "uglifyjs src/js/sparxstar-photon-vcard.js -o assets/js/sparxstar-photon-vcard.min.js --compress --mangle",
     "build": "npm run build:css && npm run build:js",
-    "copy:assets": "mkdir -p assets/css assets/js && cp src/css/sparxstar-photon-vcard.css assets/css/sparxstar-photon-vcard.css && cp src/js/sparxstar-photon-vcard.js assets/js/sparxstar-photon-vcard.js"
+    "lint:js": "eslint src/js/",
+    "lint:css": "stylelint src/css/",
+    "lint": "npm run lint:js && npm run lint:css",
+    "fix:js": "eslint src/js/ --fix",
+    "fix:css": "stylelint src/css/ --fix",
+    "fix": "npm run fix:js && npm run fix:css",
+    "analyze:php": "vendor/bin/phpstan analyse --no-progress",
+    "analyze": "npm run analyze:php",
+    "test": "npm run lint && npm run analyze"
   },
   "dependencies": {
     "qrcode": "^1.5.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "clean-css-cli": "^5.6.3",
+    "eslint": "^9.25.1",
+    "globals": "^17.5.0",
+    "stylelint": "^16.19.1",
+    "stylelint-config-standard": "^37.0.0",
     "uglify-js": "^3.19.3"
   }
 }

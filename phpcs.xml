@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<ruleset name="SPARXSTAR Photon VCard">
+    <description>PHPCS ruleset: WordPress VIP + PSR-12 for SPARXSTAR Photon VCard</description>
+
+    <file>sparxstar-photon-vcard.php</file>
+    <file>uninstall.php</file>
+    <file>includes/</file>
+
+    <arg name="basepath" value="."/>
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <!-- PHP 8.2+ -->
+    <config name="testVersion" value="8.2-"/>
+
+    <!-- WordPress VIP (includes WordPressCS) -->
+    <rule ref="WordPressVIPMinimum"/>
+    <rule ref="WordPress-Extra"/>
+    <rule ref="WordPress-Docs"/>
+
+    <!-- PSR-12 on top of WordPress standards -->
+    <rule ref="PSR1.Classes.ClassDeclaration"/>
+    <rule ref="PSR2.Methods.MethodDeclaration"/>
+
+    <!-- Namespace: Starisian\Sparxstar\Photon -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="spx_"/>
+                <element value="SPX_"/>
+                <element value="SPARXSTAR_PHOTON_VCARD"/>
+                <element value="Starisian\Sparxstar\Photon"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- Text domain -->
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="sparxstar-photon-vcard"/>
+            </property>
+        </properties>
+    </rule>
+</ruleset>
