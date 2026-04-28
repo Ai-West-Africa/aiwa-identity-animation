@@ -81,7 +81,7 @@ final class AssetLoader
 	 * @param  int  $user_id The user ID to check.
 	 * @return bool          True when the user's card is already enqueued.
 	 */
-	public static function has_card_enqueued(int $user_id): bool
+	public static function has_card_enqueued( int $user_id ): bool
 	{
 		return in_array( $user_id, self::$localized_users, true );
 	}
@@ -191,7 +191,7 @@ final class AssetLoader
 	 * @param  \WP_Post $post_obj The post whose content is parsed.
 	 * @return int[]              Ordered, unique resolved user IDs (>0).
 	 */
-	private static function extract_shortcode_user_ids(\WP_Post $post_obj): array
+	private static function extract_shortcode_user_ids( \WP_Post $post_obj ): array
 	{
 		$uids = [];
 		$regex = get_shortcode_regex( [ 'spx_photon_vcard' ] );
@@ -239,7 +239,7 @@ final class AssetLoader
 	 * @param  int  $post_id  Associated post ID (used for filter hooks). 0 for shortcode context.
 	 * @return bool           True when assets and data were successfully enqueued, false when skipped.
 	 */
-	public static function enqueue_for_user(int $user_id, int $post_id = 0): bool
+	public static function enqueue_for_user( int $user_id, int $post_id = 0 ): bool
 	{
 		// Already localized for this user — nothing to do.
 		if ( in_array( $user_id, self::$localized_users, true ) ) {
@@ -382,7 +382,7 @@ final class AssetLoader
 	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
 	 * @return array<string,mixed>       Sanitized card data for inline script injection via wp_add_inline_script.
 	 */
-	private static function build_card_data(\WP_User $user, bool $disable_sensors): array
+	private static function build_card_data( \WP_User $user, bool $disable_sensors ): array
 	{
 		$uid = (int) $user->ID;
 		$acf = function_exists( 'get_field' );
@@ -393,13 +393,13 @@ final class AssetLoader
 		// ── Job title ────────────────────────────────────────────────────────────────
 		$title = '';
 		if ( $acf ) {
-			$title = (string) (get_field( 'spx_role_title', 'user_' . $uid ) ?: '');
+			$title = (string) ( get_field( 'spx_role_title', 'user_' . $uid ) ?: '' );
 		}
 
 		// ── Company ───────────────────────────────────────────────────────────────────
 		$company = '';
 		if ( $acf ) {
-			$company = (string) (get_field( 'spx_org_name', 'user_' . $uid ) ?: '');
+			$company = (string) ( get_field( 'spx_org_name', 'user_' . $uid ) ?: '' );
 		}
 
 		// ── Communication channels (phones + messaging) ──────────────────────────────
@@ -424,8 +424,8 @@ final class AssetLoader
 					if ( ! is_array( $row ) ) {
 						continue;
 					}
-					$key = (string) ($row['spx_node_key'] ?? '');
-					$val = (string) ($row['spx_node_val'] ?? '');
+					$key = (string) ( $row['spx_node_key'] ?? '' );
+					$val = (string) ( $row['spx_node_val'] ?? '' );
 					if ( '' === $val ) {
 						continue;
 					}
@@ -453,8 +453,8 @@ final class AssetLoader
 					if ( ! is_array( $row ) ) {
 						continue;
 					}
-					$key = (string) ($row['spx_node_key'] ?? '');
-					$val = (string) ($row['spx_node_val'] ?? '');
+					$key = (string) ( $row['spx_node_key'] ?? '' );
+					$val = (string) ( $row['spx_node_val'] ?? '' );
 					if ( '' !== $key && '' !== $val ) {
 						$social[] = [
 							'key' => $key,
@@ -475,12 +475,12 @@ final class AssetLoader
 		$address = [];
 		if ( $acf ) {
 			$address = [
-				'street1'  => (string) (get_field( 'spx_loc_addr_01', 'user_' . $uid ) ?: ''),
-				'street2'  => (string) (get_field( 'spx_loc_addr_02', 'user_' . $uid ) ?: ''),
-				'city'     => (string) (get_field( 'spx_loc_city', 'user_' . $uid ) ?: ''),
-				'state'    => (string) (get_field( 'spx_loc_region', 'user_' . $uid ) ?: ''),
-				'postcode' => (string) (get_field( 'spx_loc_postcode', 'user_' . $uid ) ?: ''),
-				'country'  => (string) (get_field( 'spx_loc_country_code', 'user_' . $uid ) ?: ''),
+				'street1'  => (string) ( get_field( 'spx_loc_addr_01', 'user_' . $uid ) ?: '' ),
+				'street2'  => (string) ( get_field( 'spx_loc_addr_02', 'user_' . $uid ) ?: '' ),
+				'city'     => (string) ( get_field( 'spx_loc_city', 'user_' . $uid ) ?: '' ),
+				'state'    => (string) ( get_field( 'spx_loc_region', 'user_' . $uid ) ?: '' ),
+				'postcode' => (string) ( get_field( 'spx_loc_postcode', 'user_' . $uid ) ?: '' ),
+				'country'  => (string) ( get_field( 'spx_loc_country_code', 'user_' . $uid ) ?: '' ),
 			];
 		}
 
@@ -497,7 +497,7 @@ final class AssetLoader
 		// ACF true_false fields commonly return false, 0, '0', 1, or '1'.
 		// Treat explicit falsey opt-out values as non-public while preserving
 		// the existing default-on behavior for null/unset values.
-		$is_photo_public = null === $img_pub || (false !== $img_pub && 0 !== $img_pub && '0' !== $img_pub);
+		$is_photo_public = null === $img_pub || ( false !== $img_pub && 0 !== $img_pub && '0' !== $img_pub );
 
 		if ( $is_photo_public ) {
 			if ( $acf ) {

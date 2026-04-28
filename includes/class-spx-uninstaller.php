@@ -1,8 +1,16 @@
 <?php
+// phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- spx prefix is intentional.
 
 declare(strict_types=1);
 
 namespace Starisian\Sparxstar\Photon;
+
+/**
+ * Plugin uninstaller.
+ *
+ * @package Starisian\Sparxstar\Photon
+ * @since   1.0.0
+ */
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
@@ -49,11 +57,13 @@ final class Uninstaller {
 						continue;
 					}
 
+					// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog -- multisite uninstall iteration is the documented use case.
 					switch_to_blog( (int) $site->blog_id );
 					self::run_for_site();
 				}
 
 				if ( 0 !== $original_blog_id ) {
+					// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog -- restoring original blog context after multisite uninstall iteration.
 					switch_to_blog( (int) $original_blog_id );
 				}
 			} else {
@@ -106,6 +116,7 @@ final class Uninstaller {
 	private static function delete_user_meta(): void {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall cleanup requires a direct DELETE query; caching is inappropriate here.
 		$deleted_rows = $wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s",
@@ -114,11 +125,13 @@ final class Uninstaller {
 		);
 
 		if ( false === $deleted_rows ) {
-			error_log(
+			wp_trigger_error(
+				__METHOD__,
 				sprintf(
 					'SPARXSTAR Photon VCard uninstall: Failed to delete user meta. DB error: %s',
 					$wpdb->last_error
-				)
+				),
+				E_USER_WARNING
 			);
 		}
 	}
@@ -129,9 +142,7 @@ final class Uninstaller {
 	 * @return void
 	 */
 	private static function delete_tables(): void {
-		// Uncomment and extend when custom tables are introduced.
-		// global $wpdb;
-		// $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}sparxstar_photon_vcard_data" );
+		// No custom tables exist in this version; extend here when they are introduced.
 	}
 
 	/**
@@ -144,11 +155,13 @@ final class Uninstaller {
 
 		// Guard: wp_upload_dir() sets 'error' to a non-empty string on failure.
 		if ( ! empty( $upload_dir['error'] ) ) {
-			error_log(
+			wp_trigger_error(
+				__METHOD__,
 				sprintf(
 					'SPARXSTAR Photon VCard uninstall: wp_upload_dir() returned an error, skipping upload cleanup. Error: %s',
 					$upload_dir['error']
-				)
+				),
+				E_USER_WARNING
 			);
 			return;
 		}
@@ -183,14 +196,22 @@ final class Uninstaller {
 		}
 
 		if ( ! ( $wp_filesystem instanceof \WP_Filesystem_Base ) ) {
-			error_log( 'SPARXSTAR Photon VCard uninstall: WP_Filesystem unavailable, skipping upload directory cleanup.' );
+			wp_trigger_error(
+				__METHOD__,
+				'SPARXSTAR Photon VCard uninstall: WP_Filesystem unavailable, skipping upload directory cleanup.',
+				E_USER_WARNING
+			);
 			return false;
 		}
 
 		$deleted = $wp_filesystem->rmdir( $dir, true );
 
 		if ( ! $deleted ) {
-			error_log( sprintf( 'SPARXSTAR Photon VCard uninstall: failed to remove directory: %s', $dir ) );
+			wp_trigger_error(
+				__METHOD__,
+				sprintf( 'SPARXSTAR Photon VCard uninstall: failed to remove directory: %s', $dir ),
+				E_USER_WARNING
+			);
 		}
 
 		return (bool) $deleted;

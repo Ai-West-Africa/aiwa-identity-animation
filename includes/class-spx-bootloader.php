@@ -1,8 +1,16 @@
 <?php
+// phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- spx prefix is intentional.
 
 declare(strict_types=1);
 
 namespace Starisian\Sparxstar\Photon;
+
+/**
+ * Plugin bootloader.
+ *
+ * @package Starisian\Sparxstar\Photon
+ * @since   1.0.0
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -78,6 +86,7 @@ final class Bootloader {
 
 			if ( ! empty( $site_ids ) ) {
 				foreach ( $site_ids as $site_id ) {
+					// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog -- multisite activation iteration is the documented use case.
 					switch_to_blog( (int) $site_id );
 					self::activate_for_site();
 				}
@@ -118,6 +127,7 @@ final class Bootloader {
 			require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-pwa.php';
 		}
 		PwaController::register_rewrite_rules();
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.flush_rewrite_rules_flush_rewrite_rules -- required during plugin activation to register custom PWA routes immediately.
 		flush_rewrite_rules( false );
 	}
 
@@ -137,6 +147,7 @@ final class Bootloader {
 
 			if ( ! empty( $site_ids ) ) {
 				foreach ( $site_ids as $site_id ) {
+					// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog -- multisite deactivation iteration is the documented use case.
 					switch_to_blog( (int) $site_id );
 					self::deactivate_for_site();
 				}
@@ -169,7 +180,7 @@ final class Bootloader {
 	}
 
 	/**
-	 * plugins_loaded callback.
+	 * Plugins_loaded callback.
 	 *
 	 * Verifies requirements, loads the text domain, shows the activation
 	 * welcome notice when the transient is present, and boots the asset
