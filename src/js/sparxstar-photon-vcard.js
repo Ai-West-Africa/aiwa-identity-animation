@@ -1426,28 +1426,22 @@ ${this.renderCloseButton()}
     }
 
     _canShare() {
-      try {
-        if (typeof navigator.share !== "function") return false;
-
-        if (typeof navigator.canShare === "function") {
-          return navigator.canShare({ text: "x" });
-        }
-
-        return true;
-      } catch (error) {
-        this.reportRuntimeError(error, "_canShare");
-        return false;
-      }
+      return typeof navigator.share === "function";
     }
 
     _canSendFile() {
-      if (!navigator.canShare) return false;
+      if (
+        typeof navigator.share !== "function" ||
+        typeof navigator.canShare !== "function"
+      ) {
+        return false;
+      }
 
       try {
-        const b = new Blob(["test"], { type: "text/vcard" });
-        const f = new File([b], "test.vcf", { type: "text/vcard" });
+        const blob = new Blob(["test"], { type: "text/vcard" });
+        const file = new File([blob], "test.vcf", { type: "text/vcard" });
 
-        return navigator.canShare({ files: [f] });
+        return navigator.canShare({ files: [file] });
       } catch (error) {
         this.reportRuntimeError(error, "_canSendFile");
         return false;
