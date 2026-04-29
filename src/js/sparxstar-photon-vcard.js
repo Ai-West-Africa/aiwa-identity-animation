@@ -1147,7 +1147,6 @@ ${this.renderCloseButton()}
       this.ensureQRCodeLib(() => {
         container.innerHTML = "";
 
-         
         new QRCode(container, {
           text: this.generateVCard(),
           width: 180,
@@ -1238,7 +1237,6 @@ ${this.renderCloseButton()}
           Math.min(maxQrSizePx, availableWidthPx, availableHeightPx),
         );
 
-         
         new QRCode(inner, {
           text: this.generateVCard(),
           width: qrSizePx,
