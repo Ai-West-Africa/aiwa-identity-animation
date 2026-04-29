@@ -24,27 +24,22 @@
 :root {
   --spx_card_w: 320px;
   --spx_card_h: 560px;
-
   --spx_bg_1: #090b0f;
   --spx_bg_2: #161922;
-
   --spx_cyan: #00f2ff;
   --spx_blue: #0062ff;
   --spx_purple: #7000ff;
-
-  --spx_text: #ffffff;
-  --spx_text_soft: rgba(255,255,255,0.72);
-  --spx_text_faint: rgba(255,255,255,0.42);
-
+  --spx_text: #fff;
+  --spx_text_soft: rgb(255 255 255 / 72%);
+  --spx_text_faint: rgb(255 255 255 / 42%);
   --spx_glass:
     linear-gradient(
       145deg,
-      rgba(255,255,255,0.05),
-      rgba(255,255,255,0.02)
+      rgb(255 255 255 / 5%),
+      rgb(255 255 255 / 2%)
     );
-
   --spx_border:
-    rgba(255,255,255,0.08);
+    rgb(255 255 255 / 8%);
 }
 
 /* ==========================================
@@ -54,30 +49,23 @@
 #spax-photon-card-overlay {
   position: fixed;
   inset: 0;
-
   display: none;
-
   background:
     radial-gradient(
       circle at top,
-      rgba(0,242,255,0.08),
+      rgb(0 242 255 / 8%),
       transparent 40%
     ),
     radial-gradient(
       circle at bottom,
-      rgba(112,0,255,0.12),
+      rgb(112 0 255 / 12%),
       transparent 50%
     ),
     #050608;
-
   z-index: 999999;
-
   opacity: 0;
-
   overflow: hidden;
-
   transition: opacity 0.25s ease;
-
   font-family:
     -apple-system,
     BlinkMacSystemFont,
@@ -110,12 +98,10 @@ body.spax-photon-card-active {
   display: flex;
   align-items: center;
   justify-content: center;
-
   padding:
     max(24px, env(safe-area-inset-top))
     20px
     max(24px, env(safe-area-inset-bottom));
-
   box-sizing: border-box;
 }
 
@@ -125,27 +111,20 @@ body.spax-photon-card-active {
 
 .spx_card_wrapper {
   position: relative;
-
   width: var(--spx_card_w);
   height: var(--spx_card_h);
-
   border-radius: 24px;
-
   overflow: hidden;
-
   background: #000;
-
   box-shadow:
-    0 30px 90px rgba(0,0,0,0.7),
-    0 0 80px rgba(0,98,255,0.18);
+    0 30px 90px rgb(0 0 0 / 70%),
+    0 0 80px rgb(0 98 255 / 18%);
 }
 
 .spx_card_wrapper::before {
   content: "";
-
   position: absolute;
   inset: -50%;
-
   background:
     linear-gradient(
       var(--spx_rotate),
@@ -153,28 +132,24 @@ body.spax-photon-card-active {
       var(--spx_blue) 45%,
       var(--spx_purple)
     );
-
   animation:
     spx_rotate_border 5s linear infinite;
 }
 
 .spx_card_wrapper::after {
   content: "";
-
   position: absolute;
   inset: 2px;
-
   border-radius: 22px;
-
   background:
     radial-gradient(
       circle at top left,
-      rgba(0,242,255,0.08),
+      rgb(0 242 255 / 8%),
       transparent 30%
     ),
     radial-gradient(
       circle at bottom right,
-      rgba(112,0,255,0.12),
+      rgb(112 0 255 / 12%),
       transparent 40%
     ),
     linear-gradient(
@@ -182,7 +157,6 @@ body.spax-photon-card-active {
       var(--spx_bg_1),
       var(--spx_bg_2)
     );
-
   z-index: 1;
 }
 
@@ -193,11 +167,8 @@ body.spax-photon-card-active {
 .spx_card_content {
   position: absolute;
   inset: 0;
-
   z-index: 2;
-
   display: grid;
-
   grid-template-rows:
     auto
     auto
@@ -207,13 +178,9 @@ body.spax-photon-card-active {
     1fr
     auto
     auto;
-
   justify-items: center;
-
   padding: 34px 22px 22px;
-
   text-align: center;
-
   color: var(--spx_text);
 }
 
@@ -225,57 +192,43 @@ body.spax-photon-card-active {
 .spx_user_initials {
   width: 110px;
   height: 110px;
-
   border-radius: 50%;
-
   margin-bottom: 18px;
-
   flex-shrink: 0;
-
   position: relative;
-
   z-index: 2;
 }
 
 .spx_user_photo {
   object-fit: cover;
-
   background: #101216;
-
   border:
-    2px solid rgba(255,255,255,0.14);
-
+    2px solid rgb(255 255 255 / 14%);
   box-shadow:
-    0 0 0 2px rgba(0,242,255,0.5),
-    0 0 24px rgba(0,242,255,0.28),
-    0 0 60px rgba(112,0,255,0.18);
+    0 0 0 2px rgb(0 242 255 / 50%),
+    0 0 24px rgb(0 242 255 / 28%),
+    0 0 60px rgb(112 0 255 / 18%);
 }
 
 .spx_user_initials {
   display: flex;
   align-items: center;
   justify-content: center;
-
   font-size: 36px;
   font-weight: 700;
-
   letter-spacing: -1px;
-
-  color: rgba(255,255,255,0.88);
-
+  color: rgb(255 255 255 / 88%);
   background:
     linear-gradient(
       145deg,
       #161922,
       #0d0f14
     );
-
   border:
-    2px solid rgba(255,255,255,0.08);
-
+    2px solid rgb(255 255 255 / 8%);
   box-shadow:
-    0 0 0 2px rgba(0,242,255,0.4),
-    0 0 22px rgba(0,242,255,0.18);
+    0 0 0 2px rgb(0 242 255 / 40%),
+    0 0 22px rgb(0 242 255 / 18%);
 }
 
 /* ==========================================
@@ -285,37 +238,26 @@ body.spax-photon-card-active {
 .spx_name {
   font-size: 30px;
   font-weight: 800;
-
   line-height: 1.05;
-
   letter-spacing: -1px;
-
   margin: 0 0 4px;
-
   color: #fff;
-
   text-shadow:
-    0 0 18px rgba(0,242,255,0.15);
+    0 0 18px rgb(0 242 255 / 15%);
 }
 
 .spx_title {
   margin: 0;
-
   font-size: 15px;
-
   color: var(--spx_text_soft);
 }
 
 .spx_company {
   margin: 4px 0 10px;
-
   font-size: 11px;
   font-weight: 700;
-
   letter-spacing: 2px;
-
   text-transform: uppercase;
-
   color: var(--spx_text_faint);
 }
 
@@ -326,11 +268,8 @@ body.spax-photon-card-active {
 .spx_phone_link {
   font-size: 17px;
   font-weight: 600;
-
   color: var(--spx_cyan);
-
   text-decoration: none;
-
   margin-top: 6px;
 }
 
@@ -345,33 +284,26 @@ body.spax-photon-card-active {
 @keyframes spx_qr_pulse {
   0%, 100% {
     box-shadow:
-      0 0 24px rgba(0,242,255,0.18),
-      0 0 60px rgba(112,0,255,0.16);
+      0 0 24px rgb(0 242 255 / 18%),
+      0 0 60px rgb(112 0 255 / 16%);
   }
 
   50% {
     box-shadow:
-      0 0 38px rgba(0,242,255,0.32),
-      0 0 80px rgba(112,0,255,0.28);
+      0 0 38px rgb(0 242 255 / 32%),
+      0 0 80px rgb(112 0 255 / 28%);
   }
 }
 
 .spx_qr_code {
   width: 200px;
   height: 200px;
-
   background: #fff;
-
   padding: 10px;
-
   border-radius: 22px;
-
   overflow: hidden;
-
   cursor: pointer;
-
   margin-bottom: 24px;
-
   animation:
     spx_qr_pulse 4s ease-in-out infinite;
 }
@@ -383,8 +315,7 @@ body.spax-photon-card-active {
 
 .spx_qr_code:focus-visible {
   outline:
-    2px solid rgba(0,242,255,0.7);
-
+    2px solid rgb(0 242 255 / 70%);
   outline-offset: 4px;
 }
 
@@ -405,24 +336,16 @@ body.spax-photon-card-active {
 .spx_action_item {
   width: 56px;
   height: 56px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border-radius: 18px;
-
   background: var(--spx_glass);
-
   border:
     1px solid var(--spx_border);
-
-  color: rgba(255,255,255,0.72);
-
+  color: rgb(255 255 255 / 72%);
   backdrop-filter: blur(10px);
-
   text-decoration: none;
-
   transition:
     transform 0.18s ease,
     background 0.18s ease,
@@ -432,17 +355,14 @@ body.spax-photon-card-active {
 
 .spx_action_item:hover {
   transform: translateY(-2px);
-
   color: var(--spx_cyan);
-
   border-color:
-    rgba(0,242,255,0.28);
-
+    rgb(0 242 255 / 28%);
   background:
     linear-gradient(
       145deg,
-      rgba(0,242,255,0.12),
-      rgba(112,0,255,0.08)
+      rgb(0 242 255 / 12%),
+      rgb(112 0 255 / 8%)
     );
 }
 
@@ -453,12 +373,9 @@ body.spax-photon-card-active {
 .spx_action_item svg {
   width: 24px;
   height: 24px;
-
-  stroke: currentColor;
+  stroke: currentcolor;
   fill: none;
-
   stroke-width: 2;
-
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -473,34 +390,23 @@ body.spax-photon-card-active {
 
 .spax-photon-close {
   position: absolute;
-
   top:
     max(18px, env(safe-area-inset-top));
-
   right: 18px;
-
   width: 42px;
   height: 42px;
-
   border-radius: 50%;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   background:
-    rgba(255,255,255,0.06);
-
+    rgb(255 255 255 / 6%);
   border:
-    1px solid rgba(255,255,255,0.1);
-
+    1px solid rgb(255 255 255 / 10%);
   color:
-    rgba(255,255,255,0.72);
-
+    rgb(255 255 255 / 72%);
   cursor: pointer;
-
   z-index: 20;
-
   transition:
     background 0.18s ease,
     color 0.18s ease;
@@ -508,8 +414,7 @@ body.spax-photon-card-active {
 
 .spax-photon-close:hover {
   background:
-    rgba(255,255,255,0.12);
-
+    rgb(255 255 255 / 12%);
   color: #fff;
 }
 
@@ -520,22 +425,15 @@ body.spax-photon-card-active {
 #spax-photon-qr-fs {
   position: fixed;
   inset: 0;
-
   z-index: 1000000;
-
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-
   gap: 16px;
-
-  background: #ffffff;
-
+  background: #fff;
   padding: 24px;
-
   box-sizing: border-box;
-
   cursor: pointer;
 }
 
@@ -545,21 +443,15 @@ body.spax-photon-card-active {
 
 .spx_qr_fs_tip {
   margin: 0;
-
   font-size: 14px;
-
   color: #444;
 }
 
 .spx_qr_fs_label {
   margin: 0;
-
   font-size: 11px;
-
   text-transform: uppercase;
-
   letter-spacing: 2px;
-
   color: #999;
 }
 
@@ -570,42 +462,30 @@ body.spax-photon-card-active {
 #spax-photon-sensor-grant,
 #spax-photon-open-btn {
   position: fixed;
-
   bottom:
     max(24px, env(safe-area-inset-bottom));
-
   min-height: 46px;
-
   padding: 14px 22px;
-
   border-radius: 999px;
-
   font-size: 14px;
   font-weight: 600;
-
   cursor: pointer;
-
   z-index: 9999;
 }
 
 #spax-photon-sensor-grant {
   right: 20px;
-
   border: none;
-
   background: #fff;
   color: #000;
 }
 
 #spax-photon-open-btn {
   left: 20px;
-
   background:
-    rgba(255,255,255,0.06);
-
+    rgb(255 255 255 / 6%);
   border:
-    1px solid rgba(255,255,255,0.1);
-
+    1px solid rgb(255 255 255 / 10%);
   color: #fff;
 }
 
@@ -628,7 +508,6 @@ body.spax-photon-card-active {
    ========================================== */
 
 @media (prefers-reduced-motion: reduce) {
-
   .spx_card_wrapper::before,
   .spx_qr_code {
     animation: none;
@@ -643,8 +522,7 @@ body.spax-photon-card-active {
    Mobile Adjustments
    ========================================== */
 
-@media (max-width: 420px) {
-
+@media (width <= 420px) {
   :root {
     --spx_card_w: 92vw;
     --spx_card_h: 540px;
@@ -665,8 +543,8 @@ gap: 6px;
 padding: 12px 24px;
 min-height: 44px;
 background: #1c1c1e;
-color: #ffffff;
-border: 1px solid rgba(255, 255, 255, 0.18);
+color: #fff;
+border: 1px solid rgb(255 255 255 / 18%);
 border-radius: 8px;
 font-size: 0.95rem;
 font-weight: 600;
@@ -676,12 +554,12 @@ text-decoration: none;
 }
 
 .spax-photon-trigger-btn:hover {
-background: #000000;
-border-color: rgba(255, 255, 255, 0.35);
+background: #000;
+border-color: rgb(255 255 255 / 35%);
 }
 
 .spax-photon-trigger-btn:focus-visible {
-outline: 2px solid rgba(0, 242, 255, 0.7);
+outline: 2px solid rgb(0 242 255 / 70%);
 outline-offset: 3px;
 }
 
@@ -695,7 +573,7 @@ color: #128C7E;
 }
 
 .spx_action_item--whatsapp svg.spx-wa-icon {
-fill: currentColor;
+fill: currentcolor;
 stroke: none;
 stroke-width: 0;
 }
@@ -704,7 +582,7 @@ stroke-width: 0;
 #spax-photon-qr-fs {
 position: fixed;
 inset: 0;
-background: #ffffff;
+background: #fff;
 z-index: 1000000;
 display: flex;
 flex-direction: column;
@@ -722,6 +600,7 @@ outline: none;
 outline: 3px solid #0062ff;
 outline-offset: -6px;
 }
+
 #spax-photon-qr-fs-inner {
 line-height: 0;
 border-radius: 4px;
@@ -766,6 +645,7 @@ to   { transform: translateY(0);    opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
 #spax-photon-card-overlay      { transition: none; }
 .spx_card_wrapper::before      { animation: none; }
+
 #spax-photon-sensor-grant,
 #spax-photon-open-btn          { animation: none; transition: none; }
 .spx_qr_code                   { animation: none; }
