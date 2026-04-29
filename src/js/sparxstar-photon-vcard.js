@@ -1496,7 +1496,7 @@ ${this.renderCloseButton()}
         for (let i = 0; i < extPart.length; i++) {
           const c = extPart.charCodeAt(i);
 
-          if (c >= 48 && c <= 57) {
+          if (c >= 48 && c <= 57) { // 48-57 = '0'-'9'
             digits += extPart[i];
           }
         }
@@ -1513,12 +1513,12 @@ ${this.renderCloseButton()}
       for (let i = 0; i < main.length; i++) {
         const c = main.charCodeAt(i);
 
-        if (i === 0 && c === 43) {
+        if (i === 0 && c === 43) { // 43 = '+'
           hasLeadingPlus = true;
           continue;
         }
 
-        if (c >= 48 && c <= 57) {
+        if (c >= 48 && c <= 57) { // 48-57 = '0'-'9'
           normalized += main[i];
         }
       }
