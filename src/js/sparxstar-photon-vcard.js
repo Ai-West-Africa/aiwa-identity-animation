@@ -203,7 +203,7 @@
       btn.addEventListener(
         "click",
         () => {
-          this.requestSensorAccess();
+          this.requestSensorAccess(true);
           btn.remove();
         },
         { passive: true },
@@ -243,7 +243,7 @@
       });
     }
 
-    async requestSensorAccess() {
+    async requestSensorAccess(fromUserGesture = false) {
       if (this.state.sensorBound) return;
 
       try {
@@ -256,6 +256,15 @@
           typeof DeviceMotionEvent.requestPermission === "function";
 
         if (needsOrientPerm || needsMotionPerm) {
+          // On iOS, requestPermission() must be called from a direct user
+          // gesture.  When invoked automatically (e.g. at init or after card
+          // close), skip the permission prompt and show the setup button so
+          // the user can grant access themselves.
+          if (!fromUserGesture) {
+            this.renderSetupButton();
+            return;
+          }
+
           const timeout = setTimeout(
             () => this.renderSetupButton(),
             this.config.permissionTimeout,
@@ -287,6 +296,10 @@
 
         this.enableSensors(true, true);
       } catch (error) {
+        // Permission request failed (e.g. called outside a user gesture).
+        // Clear the persisted flag so the setup button re-appears on next load.
+        this.storage("spx_photon_motion_enabled", "false");
+        this.renderSetupButton();
         this.reportRuntimeError(error, "requestSensorAccess");
       }
     }
@@ -539,8 +552,8 @@
       return `
 ${this.renderCloseButton()}
 
-<div class="spx_vcard_page_wrapper">
-  <div class="spx_card_wrapper">
+<div class="spx-vcard-page-wrapper">
+  <div class="spx-card-wrapper">
     ${this.renderCard()}
   </div>
 </div>
@@ -561,7 +574,7 @@ ${this.renderCloseButton()}
 
     renderCard() {
       return `
-<div class="spx_card_content">
+<div class="spx-card-content">
   ${this.renderIdentityBlock()}
   ${this.renderQRBlock()}
   ${this.renderActions()}
@@ -571,7 +584,7 @@ ${this.renderCloseButton()}
 
     renderIdentityBlock() {
       return `
-<div class="spx_identity_block">
+<div class="spx-identity-block">
   ${this.renderPhoto()}
   ${this.renderIdentityText()}
 </div>
@@ -586,7 +599,7 @@ ${this.renderCloseButton()}
         return `
 <img
   src="${this.escAttr(photoSrc)}"
-  class="spx_user_photo"
+  class="spx-user-photo"
   alt="${this.escAttr(this.d.name || "")}"
   width="110"
   height="110"
@@ -597,7 +610,7 @@ ${this.renderCloseButton()}
 
       return `
 <div
-  class="spx_user_initials"
+  class="spx-user-initials"
   role="img"
   aria-label="${this.escAttr(
     this.d.name ? `${this.d.name} initials` : "User initials",
@@ -613,10 +626,10 @@ ${this.renderCloseButton()}
       const company = this.esc(this.d.company || "");
 
       return `
-<div class="spx_identity_text">
-  ${name ? `<p class="spx_name">${name}</p>` : ""}
-  ${title ? `<p class="spx_title">${title}</p>` : ""}
-  ${company ? `<p class="spx_company">${company}</p>` : ""}
+<div class="spx-identity-text">
+  ${name ? `<p class="spx-name">${name}</p>` : ""}
+  ${title ? `<p class="spx-title">${title}</p>` : ""}
+  ${company ? `<p class="spx-company">${company}</p>` : ""}
   ${this.renderPrimaryPhone()}
 </div>
 `;
@@ -634,14 +647,14 @@ ${this.renderCloseButton()}
 
       if (!telHref) return "";
 
-      return `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
+      return `<a class="spx-phone-link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
     }
 
     renderQRBlock() {
       return `
 <div
   id="spax-photon-qr"
-  class="spx_qr_code"
+  class="spx-qr-code"
   role="button"
   tabindex="0"
   aria-label="Scan to save contact. Tap to expand QR code fullscreen.">
@@ -651,8 +664,8 @@ ${this.renderCloseButton()}
 
     renderActions() {
       return `
-<div class="spx_action_bar" role="group" aria-label="Business card actions">
-  <div class="spx_action_grid">
+<div class="spx-action-bar" role="group" aria-label="Business card actions">
+  <div class="spx-action-grid">
     ${this.renderPrimaryAction()}
     ${this.renderShareAction()}
     ${this.renderSaveAction()}
@@ -667,7 +680,7 @@ ${this.renderCloseButton()}
       if (waUrl) {
         return `
 <a
-  class="spx_action_item spx_action_item--whatsapp"
+  class="spx-action-item spx-action-item-whatsapp"
   href="${this.escAttr(waUrl)}"
   target="_blank"
   rel="noopener noreferrer"
@@ -683,7 +696,7 @@ ${this.renderCloseButton()}
       return `
 <button
   type="button"
-  class="spx_action_item"
+  class="spx-action-item"
   id="spax-photon-send-btn"
   aria-label="${this.esc(this._sendButtonLabel())}">
   ${this.iconSend()}
@@ -697,7 +710,7 @@ ${this.renderCloseButton()}
       return `
 <button
   type="button"
-  class="spx_action_item"
+  class="spx-action-item"
   id="spax-photon-share-btn"
   aria-label="Share Link">
   ${this.iconShare()}
@@ -709,7 +722,7 @@ ${this.renderCloseButton()}
       return `
 <button
   type="button"
-  class="spx_action_item"
+  class="spx-action-item"
   id="spax-photon-save-btn"
   aria-label="Save Contact">
   ${this.iconSave()}
@@ -802,14 +815,14 @@ ${this.renderCloseButton()}
         });
       }
 
-      const photoEl = overlay.querySelector("img.spx_user_photo");
+      const photoEl = overlay.querySelector("img.spx-user-photo");
 
       if (photoEl) {
         photoEl.addEventListener(
           "error",
           () => {
             const fallback = document.createElement("div");
-            fallback.className = "spx_user_initials";
+            fallback.className = "spx-user-initials";
             fallback.setAttribute("role", "img");
             fallback.setAttribute(
               "aria-label",
@@ -859,6 +872,7 @@ ${this.renderCloseButton()}
         new CustomEvent("spx-photon-card-event", {
           detail: {
             type: "close",
+            method: null,
             timestamp: Date.now(),
           },
         }),
@@ -1001,8 +1015,8 @@ ${this.renderCloseButton()}
         }
       });
 
-      if (email) lines.push(`EMAIL:${email}`);
-      if (website) lines.push(`URL:${website}`);
+      if (email) lines.push(`EMAIL:${ve(email)}`);
+      if (website) lines.push(`URL:${ve(website)}`);
 
       const s1 = ve(String(addr.street1 || "").trim());
       const s2 = ve(String(addr.street2 || "").trim());
@@ -1090,13 +1104,13 @@ ${this.renderCloseButton()}
             .replace(/^-+|-+$/g, "") ||
           "SOCIAL";
 
-        lines.push(`X-SOCIALPROFILE;TYPE=${socialType}:${safeVal}`);
-        lines.push(`URL:${safeVal}`);
+        lines.push(`X-SOCIALPROFILE;TYPE=${socialType}:${ve(safeVal)}`);
+        lines.push(`URL:${ve(safeVal)}`);
       });
 
       if (photo) {
         const safePhoto = this.safeURL(photo);
-        if (safePhoto) lines.push(`PHOTO;VALUE=URI:${safePhoto}`);
+        if (safePhoto) lines.push(`PHOTO;VALUE=URI:${ve(safePhoto)}`);
       }
 
       lines.push(
@@ -1133,7 +1147,7 @@ ${this.renderCloseButton()}
       this.ensureQRCodeLib(() => {
         container.innerHTML = "";
 
-        // eslint-disable-next-line no-undef
+         
         new QRCode(container, {
           text: this.generateVCard(),
           width: 180,
@@ -1181,12 +1195,12 @@ ${this.renderCloseButton()}
       inner.id = "spax-photon-qr-fs-inner";
 
       const tip = document.createElement("p");
-      tip.className = "spx_qr_fs_tip";
+      tip.className = "spx-qr-fs-tip";
       tip.textContent = "☀ Increase brightness for best outdoor scan";
       tip.setAttribute("aria-hidden", "true");
 
       const label = document.createElement("p");
-      label.className = "spx_qr_fs_label";
+      label.className = "spx-qr-fs-label";
       label.textContent = "Tap anywhere to close";
       label.setAttribute("aria-hidden", "true");
 
@@ -1224,7 +1238,7 @@ ${this.renderCloseButton()}
           Math.min(maxQrSizePx, availableWidthPx, availableHeightPx),
         );
 
-        // eslint-disable-next-line no-undef
+         
         new QRCode(inner, {
           text: this.generateVCard(),
           width: qrSizePx,
