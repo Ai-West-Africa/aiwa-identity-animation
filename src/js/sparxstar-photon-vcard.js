@@ -487,7 +487,7 @@
       this.lastFocus = document.activeElement;
       this.state.isActive = true;
 
-      this.disableSensors();
+      this.disableSensors(false);
 
       const openBtn = document.getElementById("spax-photon-open-btn");
       if (openBtn) openBtn.hidden = true;
@@ -1427,7 +1427,13 @@ ${this.renderCloseButton()}
 
     _canShare() {
       try {
-        return !!(navigator.canShare && navigator.canShare({ text: "x" }));
+        if (typeof navigator.share !== "function") return false;
+
+        if (typeof navigator.canShare === "function") {
+          return navigator.canShare({ text: "x" });
+        }
+
+        return true;
       } catch (error) {
         this.reportRuntimeError(error, "_canShare");
         return false;
@@ -1473,19 +1479,61 @@ ${this.renderCloseButton()}
     toTelHrefValue(value) {
       const raw = String(value || "").trim();
 
-      if (!raw) return "";
+      if (raw.length === 0) {
+        return "";
+      }
 
-      const extMatch = raw.match(/(?:ext\.?|x)\s*[:.]?\s*(\d+)$/i);
-      const extension = extMatch ? extMatch[1] : "";
-      const mainPart = extMatch ? raw.slice(0, extMatch.index).trim() : raw;
-      const hasLeadingPlus = /^\s*\+/.test(mainPart);
-      const digits = mainPart.replace(/\D/g, "");
+      let extension = "";
+      let main = raw;
 
-      if (!digits) return "";
+      const lower = raw.toLowerCase();
+      const extIndex = lower.lastIndexOf(" ext");
 
-      return `${hasLeadingPlus ? "+" : ""}${digits}${
-        extension ? `;ext=${extension}` : ""
-      }`;
+      if (extIndex !== -1) {
+        const extPart = raw.slice(extIndex);
+        let digits = "";
+
+        for (let i = 0; i < extPart.length; i++) {
+          const c = extPart.charCodeAt(i);
+
+          if (c >= 48 && c <= 57) {
+            digits += extPart[i];
+          }
+        }
+
+        if (digits.length > 0) {
+          extension = digits;
+          main = raw.slice(0, extIndex).trim();
+        }
+      }
+
+      let normalized = "";
+      let hasLeadingPlus = false;
+
+      for (let i = 0; i < main.length; i++) {
+        const c = main.charCodeAt(i);
+
+        if (i === 0 && c === 43) {
+          hasLeadingPlus = true;
+          continue;
+        }
+
+        if (c >= 48 && c <= 57) {
+          normalized += main[i];
+        }
+      }
+
+      if (normalized.length === 0) {
+        return "";
+      }
+
+      let result = hasLeadingPlus ? `+${normalized}` : normalized;
+
+      if (extension) {
+        result += `;ext=${extension}`;
+      }
+
+      return result;
     }
 
     iconSave() {
