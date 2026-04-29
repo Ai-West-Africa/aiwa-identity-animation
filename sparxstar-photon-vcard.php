@@ -1,6 +1,7 @@
 <?php
 /**
  * SPARXSTAR Photon VCard
+ *
  * @version           0.5.0
  * @package           sparxstar-photon-vcard
  * @author            Starisian Technologies (Max Barrett) <support@starisian.com>

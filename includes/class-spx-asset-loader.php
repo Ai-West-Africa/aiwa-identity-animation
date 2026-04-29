@@ -1,17 +1,14 @@
 <?php
-
-declare(strict_types=1);
-
-// phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- spx prefix is intentional.
-
-namespace Starisian\Sparxstar\Photon;
-
 /**
  * Asset loader — front-end orchestrator.
  *
  * @package Starisian\Sparxstar\Photon
  * @since   1.0.0
  */
+
+declare(strict_types=1);
+
+namespace Starisian\Sparxstar\Photon;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -78,8 +75,8 @@ final class AssetLoader
 	 * Used by PwaController to decide whether to inject the PWA manifest
 	 * link into the page head.
 	 *
-	 * @param  int  $user_id The user ID to check.
-	 * @return bool          True when the user's card is already enqueued.
+	 * @param int $user_id The user ID to check.
+	 * @return bool         True when the user's card is already enqueued.
 	 */
 	public static function has_card_enqueued( int $user_id ): bool
 	{
@@ -235,9 +232,9 @@ final class AssetLoader
 	 * user's card data is appended to the global users map via an inline
 	 * script.  Assets (CSS/JS) are enqueued only on the first call.
 	 *
-	 * @param  int  $user_id  Author / card owner user ID.
-	 * @param  int  $post_id  Associated post ID (used for filter hooks). 0 for shortcode context.
-	 * @return bool           True when assets and data were successfully enqueued, false when skipped.
+	 * @param int  $user_id  Author / card owner user ID.
+	 * @param int  $post_id  Associated post ID (used for filter hooks). 0 for shortcode context.
+	 * @return bool          True when assets and data were successfully enqueued, false when skipped.
 	 */
 	public static function enqueue_for_user( int $user_id, int $post_id = 0 ): bool
 	{
@@ -264,10 +261,10 @@ final class AssetLoader
 		$allowed_roles = array_values(
 			array_filter(
 				array_map(
-					static fn($role): string => (string) $role,
+					static fn( $role ): string => (string) $role,
 					(array) $allowed_roles
 				),
-				static fn(string $role): bool => '' !== $role
+				static fn( string $role ): bool => '' !== $role
 			)
 		);
 
@@ -279,7 +276,7 @@ final class AssetLoader
 		if ( function_exists( 'get_field' ) ) {
 			$display = get_field( 'spx_state_card_active', 'user_' . $user_id );
 			// Explicit false means "hide the card"; null / unset means default on.
-			if ( $display === false ) {
+			if ( false === $display ) {
 				return false;
 			}
 		}
@@ -342,6 +339,7 @@ final class AssetLoader
 		// Enterprise sensor override filter.
 		$disable_sensors = apply_filters( 'sparxstar_photon_vcard_disable_sensors', false, $user_id, $post_id );
 		// Backwards-compat alias.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- intentional enterprise override hook; prefix would break existing integrations.
 		$disable_sensors = apply_filters( 'vip_motion_disable_sensors', $disable_sensors, $user_id, $post_id );
 
 		$card_data = self::build_card_data( $user, $disable_sensors );
@@ -378,9 +376,9 @@ final class AssetLoader
 	 *   - Address:  ACF spx_loc_* fields.
 	 *   - Photo:    ACF spx_img_brand_blob → WP avatar / Gravatar fallback (unless spx_state_img_pub is explicitly false).
 	 *
-	 * @param  \WP_User $user            The card owner.
-	 * @param  bool     $disable_sensors Whether motion triggers are disabled.
-	 * @return array<string,mixed>       Sanitized card data for inline script injection via wp_add_inline_script.
+	 * @param \WP_User $user            The card owner.
+	 * @param bool     $disable_sensors Whether motion triggers are disabled.
+	 * @return array<string,mixed>      Sanitized card data for inline script injection via wp_add_inline_script.
 	 */
 	private static function build_card_data( \WP_User $user, bool $disable_sensors ): array
 	{
@@ -523,21 +521,21 @@ final class AssetLoader
 			'company'  => sanitize_text_field( $company ),
 			'title'    => sanitize_text_field( $title ),
 			'phones'   => array_map(
-				static fn(array $p): array => [
+				static fn( array $p ): array => [
 					'type'   => strtoupper( sanitize_key( $p['type'] ) ),
 					'number' => sanitize_text_field( $p['number'] ),
 				],
 				$phones
 			),
 			'channels' => array_map(
-				static fn(array $c): array => [
+				static fn( array $c ): array => [
 					'key' => sanitize_key( $c['key'] ),
 					'val' => sanitize_text_field( $c['val'] ),
 				],
 				$channels
 			),
 			'social'   => array_map(
-				static fn(array $s): array => [
+				static fn( array $s ): array => [
 					'key' => sanitize_text_field( $s['key'] ),
 					'val' => esc_url_raw( $s['val'] ),
 				],
@@ -551,4 +549,3 @@ final class AssetLoader
 		];
 	}
 }
-

@@ -1,4 +1,10 @@
 <?php
+/**
+ * ACF image field utility.
+ *
+ * @package Starisian\Sparxstar\Photon
+ * @since   0.5.0
+ */
 
 declare(strict_types=1);
 
@@ -58,6 +64,11 @@ final class AcfHelper {
 			];
 		}
 
-		return [ 'url' => '', 'mime' => 'image/jpeg', 'width' => 0, 'height' => 0 ];
+		return [
+			'url'    => '',
+			'mime'   => 'image/jpeg',
+			'width'  => 0,
+			'height' => 0,
+		];
 	}
 }

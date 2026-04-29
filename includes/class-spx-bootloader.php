@@ -1,16 +1,19 @@
 <?php
-// phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- spx prefix is intentional.
-
-declare(strict_types=1);
-
-namespace Starisian\Sparxstar\Photon;
-
 /**
  * Plugin bootloader.
+ *
+ * Wires WordPress activation / deactivation hooks and dispatches runtime
+ * initialisation to {@see AssetLoader} at plugins_loaded time.  All public
+ * surface is static so the main plugin file needs only a single call to
+ * {@see Bootloader::boot()}.
  *
  * @package Starisian\Sparxstar\Photon
  * @since   1.0.0
  */
+
+declare(strict_types=1);
+
+namespace Starisian\Sparxstar\Photon;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

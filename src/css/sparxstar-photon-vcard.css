@@ -1,4 +1,3 @@
-
 /* ==========================================
    SPARXSTAR Photon VCard
    @package       sparxstar-photon-vcard
@@ -32,19 +31,19 @@
   --spx_blue: #0062ff;
   --spx_purple: #7000ff;
 
-  --spx_text: #ffffff;
-  --spx_text_soft: rgba(255,255,255,0.72);
-  --spx_text_faint: rgba(255,255,255,0.42);
+  --spx_text: #fff;
+  --spx_text_soft: rgb(255 255 255 / 72%);
+  --spx_text_faint: rgb(255 255 255 / 42%);
 
   --spx_glass:
     linear-gradient(
       145deg,
-      rgba(255,255,255,0.05),
-      rgba(255,255,255,0.02)
+      rgb(255 255 255 / 5%),
+      rgb(255 255 255 / 2%)
     );
 
   --spx_border:
-    rgba(255,255,255,0.08);
+    rgb(255 255 255 / 8%);
 }
 
 /* ==========================================
@@ -60,12 +59,12 @@
   background:
     radial-gradient(
       circle at top,
-      rgba(0,242,255,0.08),
+      rgb(0 242 255 / 8%),
       transparent 40%
     ),
     radial-gradient(
       circle at bottom,
-      rgba(112,0,255,0.12),
+      rgb(112 0 255 / 12%),
       transparent 50%
     ),
     #050608;
@@ -136,8 +135,8 @@ body.spax-photon-card-active {
   background: #000;
 
   box-shadow:
-    0 30px 90px rgba(0,0,0,0.7),
-    0 0 80px rgba(0,98,255,0.18);
+    0 30px 90px rgb(0 0 0 / 70%),
+    0 0 80px rgb(0 98 255 / 18%);
 }
 
 .spx_card_wrapper::before {
@@ -169,12 +168,12 @@ body.spax-photon-card-active {
   background:
     radial-gradient(
       circle at top left,
-      rgba(0,242,255,0.08),
+      rgb(0 242 255 / 8%),
       transparent 30%
     ),
     radial-gradient(
       circle at bottom right,
-      rgba(112,0,255,0.12),
+      rgb(112 0 255 / 12%),
       transparent 40%
     ),
     linear-gradient(
@@ -243,12 +242,12 @@ body.spax-photon-card-active {
   background: #101216;
 
   border:
-    2px solid rgba(255,255,255,0.14);
+    2px solid rgb(255 255 255 / 14%);
 
   box-shadow:
-    0 0 0 2px rgba(0,242,255,0.5),
-    0 0 24px rgba(0,242,255,0.28),
-    0 0 60px rgba(112,0,255,0.18);
+    0 0 0 2px rgb(0 242 255 / 50%),
+    0 0 24px rgb(0 242 255 / 28%),
+    0 0 60px rgb(112 0 255 / 18%);
 }
 
 .spx_user_initials {
@@ -261,7 +260,7 @@ body.spax-photon-card-active {
 
   letter-spacing: -1px;
 
-  color: rgba(255,255,255,0.88);
+  color: rgb(255 255 255 / 88%);
 
   background:
     linear-gradient(
@@ -271,11 +270,11 @@ body.spax-photon-card-active {
     );
 
   border:
-    2px solid rgba(255,255,255,0.08);
+    2px solid rgb(255 255 255 / 8%);
 
   box-shadow:
-    0 0 0 2px rgba(0,242,255,0.4),
-    0 0 22px rgba(0,242,255,0.18);
+    0 0 0 2px rgb(0 242 255 / 40%),
+    0 0 22px rgb(0 242 255 / 18%);
 }
 
 /* ==========================================
@@ -295,7 +294,7 @@ body.spax-photon-card-active {
   color: #fff;
 
   text-shadow:
-    0 0 18px rgba(0,242,255,0.15);
+    0 0 18px rgb(0 242 255 / 15%);
 }
 
 .spx_title {
@@ -345,14 +344,14 @@ body.spax-photon-card-active {
 @keyframes spx_qr_pulse {
   0%, 100% {
     box-shadow:
-      0 0 24px rgba(0,242,255,0.18),
-      0 0 60px rgba(112,0,255,0.16);
+      0 0 24px rgb(0 242 255 / 18%),
+      0 0 60px rgb(112 0 255 / 16%);
   }
 
   50% {
     box-shadow:
-      0 0 38px rgba(0,242,255,0.32),
-      0 0 80px rgba(112,0,255,0.28);
+      0 0 38px rgb(0 242 255 / 32%),
+      0 0 80px rgb(112 0 255 / 28%);
   }
 }
 
@@ -383,7 +382,7 @@ body.spax-photon-card-active {
 
 .spx_qr_code:focus-visible {
   outline:
-    2px solid rgba(0,242,255,0.7);
+    2px solid rgb(0 242 255 / 70%);
 
   outline-offset: 4px;
 }
@@ -417,7 +416,7 @@ body.spax-photon-card-active {
   border:
     1px solid var(--spx_border);
 
-  color: rgba(255,255,255,0.72);
+  color: rgb(255 255 255 / 72%);
 
   backdrop-filter: blur(10px);
 
@@ -436,13 +435,13 @@ body.spax-photon-card-active {
   color: var(--spx_cyan);
 
   border-color:
-    rgba(0,242,255,0.28);
+    rgb(0 242 255 / 28%);
 
   background:
     linear-gradient(
       145deg,
-      rgba(0,242,255,0.12),
-      rgba(112,0,255,0.08)
+      rgb(0 242 255 / 12%),
+      rgb(112 0 255 / 8%)
     );
 }
 
@@ -454,7 +453,7 @@ body.spax-photon-card-active {
   width: 24px;
   height: 24px;
 
-  stroke: currentColor;
+  stroke: currentcolor;
   fill: none;
 
   stroke-width: 2;
@@ -489,13 +488,13 @@ body.spax-photon-card-active {
   justify-content: center;
 
   background:
-    rgba(255,255,255,0.06);
+    rgb(255 255 255 / 6%);
 
   border:
-    1px solid rgba(255,255,255,0.1);
+    1px solid rgb(255 255 255 / 10%);
 
   color:
-    rgba(255,255,255,0.72);
+    rgb(255 255 255 / 72%);
 
   cursor: pointer;
 
@@ -508,7 +507,7 @@ body.spax-photon-card-active {
 
 .spax-photon-close:hover {
   background:
-    rgba(255,255,255,0.12);
+    rgb(255 255 255 / 12%);
 
   color: #fff;
 }
@@ -530,7 +529,7 @@ body.spax-photon-card-active {
 
   gap: 16px;
 
-  background: #ffffff;
+  background: #fff;
 
   padding: 24px;
 
@@ -601,10 +600,10 @@ body.spax-photon-card-active {
   left: 20px;
 
   background:
-    rgba(255,255,255,0.06);
+    rgb(255 255 255 / 6%);
 
   border:
-    1px solid rgba(255,255,255,0.1);
+    1px solid rgb(255 255 255 / 10%);
 
   color: #fff;
 }

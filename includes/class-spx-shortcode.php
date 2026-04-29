@@ -1,4 +1,10 @@
 <?php
+/**
+ * Shortcode: [spx_photon_vcard].
+ *
+ * @package Starisian\Sparxstar\Photon
+ * @since   0.5.0
+ */
 
 declare(strict_types=1);
 

@@ -1,16 +1,14 @@
 <?php
-// phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- spx prefix is intentional.
-
-declare(strict_types=1);
-
-namespace Starisian\Sparxstar\Photon;
-
 /**
  * Plugin uninstaller.
  *
  * @package Starisian\Sparxstar\Photon
  * @since   1.0.0
  */
+
+declare(strict_types=1);
+
+namespace Starisian\Sparxstar\Photon;
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;

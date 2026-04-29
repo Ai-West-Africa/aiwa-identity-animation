@@ -80,4 +80,20 @@
     <rule ref="WordPress.Files.FileName.InvalidClassFileName">
         <exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
     </rule>
+
+    <!--
+        PSR-12 Brace Style
+        ==================================================
+        This project explicitly includes PSR2.Methods.MethodDeclaration (above)
+        to allow PSR-12 style for method declarations.  PSR-12 uses Allman-style
+        braces (opening brace on its own line) for both class and method
+        declarations.  Exclude the WordPress/K&R enforcement sniffs so they do
+        not conflict with the PSR-12 standard the rest of the codebase follows.
+    -->
+    <rule ref="Generic.Functions.OpeningFunctionBraceKernighanRitchie">
+        <exclude name="Generic.Functions.OpeningFunctionBraceKernighanRitchie.BraceOnNewLine"/>
+    </rule>
+    <rule ref="Generic.Classes.OpeningBraceSameLine">
+        <exclude name="Generic.Classes.OpeningBraceSameLine.BraceOnNewLine"/>
+    </rule>
 </ruleset>
