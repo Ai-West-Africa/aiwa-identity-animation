@@ -639,14 +639,12 @@ ${this.renderCloseButton()}
 
     renderQRBlock() {
       return `
-<div class="spx_qr_block">
-  <div
-    id="spax-photon-qr"
-    class="spx_qr_code"
-    role="button"
-    tabindex="0"
-    aria-label="Scan to save contact. Tap to expand QR code fullscreen.">
-  </div>
+<div
+  id="spax-photon-qr"
+  class="spx_qr_code"
+  role="button"
+  tabindex="0"
+  aria-label="Scan to save contact. Tap to expand QR code fullscreen.">
 </div>
 `;
     }
@@ -1123,7 +1121,9 @@ ${this.renderCloseButton()}
       a.click();
       document.body.removeChild(a);
 
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 0);
     }
 
     renderVCardQR() {
