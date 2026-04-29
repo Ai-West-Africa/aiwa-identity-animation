@@ -1,4 +1,10 @@
 <?php
+/**
+ * ACF local field group registrations.
+ *
+ * @package Starisian\Sparxstar\Photon
+ * @since   0.5.0
+ */
 
 declare(strict_types=1);
 

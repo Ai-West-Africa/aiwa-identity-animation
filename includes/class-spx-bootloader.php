@@ -1,4 +1,15 @@
 <?php
+/**
+ * Plugin bootloader.
+ *
+ * Wires WordPress activation / deactivation hooks and dispatches runtime
+ * initialisation to {@see AssetLoader} at plugins_loaded time.  All public
+ * surface is static so the main plugin file needs only a single call to
+ * {@see Bootloader::boot()}.
+ *
+ * @package Starisian\Sparxstar\Photon
+ * @since   1.0.0
+ */
 
 declare(strict_types=1);
 
@@ -78,6 +89,7 @@ final class Bootloader {
 
 			if ( ! empty( $site_ids ) ) {
 				foreach ( $site_ids as $site_id ) {
+					// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog -- multisite activation iteration is the documented use case.
 					switch_to_blog( (int) $site_id );
 					self::activate_for_site();
 				}
@@ -118,6 +130,7 @@ final class Bootloader {
 			require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-pwa.php';
 		}
 		PwaController::register_rewrite_rules();
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.flush_rewrite_rules_flush_rewrite_rules -- required during plugin activation to register custom PWA routes immediately.
 		flush_rewrite_rules( false );
 	}
 
@@ -137,6 +150,7 @@ final class Bootloader {
 
 			if ( ! empty( $site_ids ) ) {
 				foreach ( $site_ids as $site_id ) {
+					// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.switch_to_blog_switch_to_blog -- multisite deactivation iteration is the documented use case.
 					switch_to_blog( (int) $site_id );
 					self::deactivate_for_site();
 				}

@@ -43,4 +43,57 @@
             </property>
         </properties>
     </rule>
+
+    <!--
+        PHP 8.2+ / Modern WordPress (6.8+) Exceptions
+        ==================================================
+        The sniffs below are pulled in transitively from PHPCSExtra (Universal.*,
+        NormalizedArrays.*) via vipwpcs/phpcs-extra.  They conflict with current
+        WordPress Core practice and with the project's PHP 8.2+ baseline:
+
+        • Universal.Arrays.DisallowShortArraySyntax — WordPress Core adopted
+          short-array syntax in WP 5.3; PHPStan/Composer/WP-CLI tooling all use [].
+          Short arrays are idiomatic, readable PHP 5.4+ syntax.
+
+        • Universal.Operators.DisallowShortTernary — short ternary (?:) is valid
+          PHP 5.3+ and is used safely in asset-loader null-coalescing patterns.
+
+        • NormalizedArrays.Arrays.ArrayBraceSpacing — companion sniff to the
+          DisallowShortArraySyntax exclusion; would require space-padded [] but
+          that style is inconsistent with WordPress Coding Standards.
+
+        • WordPress.Files.FileName.InvalidClassFileName — all include files in this
+          plugin use the "class-spx-" prefix convention for consistent namespacing.
+          The "spx" segment is intentional and does not need to be removed.
+    -->
+    <rule ref="Universal.Arrays.DisallowShortArraySyntax">
+        <exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
+    </rule>
+    <rule ref="Universal.Operators.DisallowShortTernary">
+        <exclude name="Universal.Operators.DisallowShortTernary.Found"/>
+    </rule>
+    <exclude-pattern>*/NormalizedArrays/*</exclude-pattern>
+    <rule ref="NormalizedArrays.Arrays.ArrayBraceSpacing">
+        <exclude name="NormalizedArrays.Arrays.ArrayBraceSpacing.SpaceAfterArrayOpenerSingleLine"/>
+        <exclude name="NormalizedArrays.Arrays.ArrayBraceSpacing.SpaceBeforeArrayCloserSingleLine"/>
+    </rule>
+    <rule ref="WordPress.Files.FileName.InvalidClassFileName">
+        <exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+    </rule>
+
+    <!--
+        PSR-12 Brace Style
+        ==================================================
+        This project explicitly includes PSR2.Methods.MethodDeclaration (above)
+        to allow PSR-12 style for method declarations.  PSR-12 uses Allman-style
+        braces (opening brace on its own line) for both class and method
+        declarations.  Exclude the WordPress/K&R enforcement sniffs so they do
+        not conflict with the PSR-12 standard the rest of the codebase follows.
+    -->
+    <rule ref="Generic.Functions.OpeningFunctionBraceKernighanRitchie">
+        <exclude name="Generic.Functions.OpeningFunctionBraceKernighanRitchie.BraceOnNewLine"/>
+    </rule>
+    <rule ref="Generic.Classes.OpeningBraceSameLine">
+        <exclude name="Generic.Classes.OpeningBraceSameLine.BraceOnNewLine"/>
+    </rule>
 </ruleset>

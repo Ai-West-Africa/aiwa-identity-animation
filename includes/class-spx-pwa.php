@@ -1,4 +1,10 @@
 <?php
+/**
+ * PWA Controller — Stealth PWA for owner-only home-screen installation.
+ *
+ * @package Starisian\Sparxstar\Photon
+ * @since   0.5.0
+ */
 
 declare(strict_types=1);
 
@@ -262,7 +268,13 @@ final class PwaController {
 		}
 		if ( '' === $icon_url ) {
 			$icon_url    = esc_url_raw(
-				(string) get_avatar_url( $uid, [ 'size' => 512, 'default' => '404' ] )
+				(string) get_avatar_url(
+					$uid,
+					[
+						'size'    => 512,
+						'default' => '404',
+					]
+				)
 			);
 			$icon_mime   = 'image/jpeg';
 			$icon_width  = 512;
@@ -351,7 +363,7 @@ final class PwaController {
 
 		$debug    = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG;
 		$css_file = $debug ? 'sparxstar-photon-vcard.css' : 'sparxstar-photon-vcard.min.css';
-		$js_file  = $debug ? 'sparxstar-photon-vcard.js'  : 'sparxstar-photon-vcard.min.js';
+		$js_file  = $debug ? 'sparxstar-photon-vcard.js' : 'sparxstar-photon-vcard.min.js';
 
 		$css_url = esc_url_raw( SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/css/' . $css_file );
 		$js_url  = esc_url_raw( SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/' . $js_file );
@@ -359,7 +371,13 @@ final class PwaController {
 		$photo_url = '';
 		if ( $uid > 0 ) {
 			$photo_url = esc_url_raw(
-				(string) get_avatar_url( $uid, [ 'size' => 200, 'default' => '404' ] )
+				(string) get_avatar_url(
+					$uid,
+					[
+						'size'    => 200,
+						'default' => '404',
+					]
+				)
 			);
 		}
 
