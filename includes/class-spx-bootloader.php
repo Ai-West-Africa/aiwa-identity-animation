@@ -183,7 +183,7 @@ final class Bootloader {
 	}
 
 	/**
-	 * Plugins_loaded callback.
+	 * plugins_loaded callback.
 	 *
 	 * Verifies requirements, loads the text domain, shows the activation
 	 * welcome notice when the transient is present, and boots the asset
