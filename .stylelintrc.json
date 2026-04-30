@@ -11,6 +11,27 @@
         "selector-pseudo-class-no-unknown": true,
         "selector-pseudo-element-no-unknown": true,
         "at-rule-no-unknown": true,
-        "comment-no-empty": true
+        "comment-no-empty": true,
+
+        "selector-class-pattern": [
+            "^((spx[_-]|spax-)[a-z0-9][a-z0-9_-]*|[a-z][a-z0-9-]*)$",
+            {
+                "message": "Expected class selector to be kebab-case or follow the spx_/spax- project prefix convention."
+            }
+        ],
+
+        "custom-property-pattern": [
+            "^spx[_-][a-z][a-z0-9_-]*$",
+            {
+                "message": "Expected custom property to follow the --spx- or --spx_ project prefix convention."
+            }
+        ],
+
+        "keyframes-name-pattern": [
+            "^(spx[_-]|spax)[a-zA-Z0-9_-]+$",
+            {
+                "message": "Expected keyframe name to follow the spx/spax project prefix convention."
+            }
+        ]
     }
 }
