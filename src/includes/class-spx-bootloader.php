@@ -30,7 +30,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @package Starisian\Sparxstar\Photon
  * @since   1.0.0
  */
-final class Bootloader {
+final class Bootloader
+{
 
 	/**
 	 * Absolute path to the main plugin file (sparxstar-photon-vcard.php).
@@ -50,12 +51,13 @@ final class Bootloader {
 	 * @param  string $plugin_file Absolute path to the main plugin file.
 	 * @return void
 	 */
-	public static function boot( string $plugin_file ): void {
+	public static function boot( string $plugin_file ): void
+	{
 		self::$plugin_file = $plugin_file;
 
-		register_activation_hook( $plugin_file, [ self::class, 'activate' ] );
-		register_deactivation_hook( $plugin_file, [ self::class, 'deactivate' ] );
-		add_action( 'plugins_loaded', [ self::class, 'init' ] );
+		register_activation_hook( $plugin_file, [self::class, 'activate'] );
+		register_deactivation_hook( $plugin_file, [self::class, 'deactivate'] );
+		add_action( 'plugins_loaded', [self::class, 'init'] );
 	}
 
 	/**
@@ -69,7 +71,8 @@ final class Bootloader {
 	 *
 	 * @return void
 	 */
-	public static function activate( bool $network_wide = false ): void {
+	public static function activate( bool $network_wide = false ): void
+	{
 		if ( ! self::check_requirements() ) {
 			deactivate_plugins( plugin_basename( self::$plugin_file ) );
 			wp_die(
@@ -80,12 +83,12 @@ final class Bootloader {
 					esc_html( SPARXSTAR_PHOTON_VCARD_MIN_WP_VERSION )
 				),
 				esc_html__( 'Plugin Activation Error', 'sparxstar-photon-vcard' ),
-				[ 'back_link' => true ]
+				['back_link' => true]
 			);
 		}
 
 		if ( $network_wide && is_multisite() ) {
-			$site_ids = get_sites( [ 'fields' => 'ids' ] );
+			$site_ids = get_sites( ['fields' => 'ids'] );
 
 			if ( ! empty( $site_ids ) ) {
 				foreach ( $site_ids as $site_id ) {
@@ -112,7 +115,8 @@ final class Bootloader {
 	 *
 	 * @return void
 	 */
-	private static function activate_for_site(): void {
+	private static function activate_for_site(): void
+	{
 		add_option(
 			'sparxstar_photon_vcard_options',
 			[
@@ -144,9 +148,10 @@ final class Bootloader {
 	 *
 	 * @return void
 	 */
-	public static function deactivate( bool $network_wide = false ): void {
+	public static function deactivate( bool $network_wide = false ): void
+	{
 		if ( $network_wide && is_multisite() ) {
-			$site_ids = get_sites( [ 'fields' => 'ids' ] );
+			$site_ids = get_sites( ['fields' => 'ids'] );
 
 			if ( ! empty( $site_ids ) ) {
 				foreach ( $site_ids as $site_id ) {
@@ -177,13 +182,14 @@ final class Bootloader {
 	 *
 	 * @return void
 	 */
-	private static function deactivate_for_site(): void {
+	private static function deactivate_for_site(): void
+	{
 		delete_transient( 'sparxstar_photon_vcard_activation_notice' );
 		delete_option( 'rewrite_rules' );
 	}
 
 	/**
-	 * plugins_loaded callback.
+	 * Plugins_loaded callback.
 	 *
 	 * Verifies requirements, loads the text domain, shows the activation
 	 * welcome notice when the transient is present, and boots the asset
@@ -191,7 +197,8 @@ final class Bootloader {
 	 *
 	 * @return void
 	 */
-	public static function init(): void {
+	public static function init(): void
+	{
 		if ( ! self::check_requirements() ) {
 			return;
 		}
@@ -207,9 +214,9 @@ final class Bootloader {
 				'admin_notices',
 				static function (): void {
 					?>
-					<div class="notice notice-success is-dismissible">
-						<p><?php esc_html_e( 'SPARXSTAR Photon VCard has been activated successfully!', 'sparxstar-photon-vcard' ); ?></p>
-					</div>
+				<div class="notice notice-success is-dismissible">
+					<p><?php esc_html_e( 'SPARXSTAR Photon VCard has been activated successfully!', 'sparxstar-photon-vcard' ); ?></p>
+				</div>
 					<?php
 				}
 			);
@@ -235,7 +242,8 @@ final class Bootloader {
 	 *
 	 * @return bool True when all requirements are satisfied.
 	 */
-	private static function check_requirements(): bool {
+	private static function check_requirements(): bool
+	{
 		$errors = [];
 
 		if ( version_compare( PHP_VERSION, SPARXSTAR_PHOTON_VCARD_MIN_PHP_VERSION, '<' ) ) {
@@ -266,9 +274,9 @@ final class Bootloader {
 						'admin_notices',
 						static function () use ( $error ): void {
 							?>
-							<div class="notice notice-error">
-								<p><?php echo esc_html( $error ); ?></p>
-							</div>
+						<div class="notice notice-error">
+							<p><?php echo esc_html( $error ); ?></p>
+						</div>
 							<?php
 						}
 					);

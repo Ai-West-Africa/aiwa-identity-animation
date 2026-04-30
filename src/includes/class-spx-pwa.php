@@ -294,7 +294,7 @@ final class PwaController {
 			$size_str = ( $icon_width >= self::PWA_MIN_ICON_SIZE && $icon_height >= self::PWA_MIN_ICON_SIZE )
 				? "{$icon_width}x{$icon_height}"
 				: 'any';
-			$icons[] = [
+			$icons[]  = [
 				'src'     => $icon_url,
 				'sizes'   => $size_str,
 				'type'    => $icon_mime,
@@ -412,9 +412,9 @@ final class PwaController {
 	 * @return string                 Complete SW JavaScript source.
 	 */
 	private static function build_sw_script( string $cache_name, string $precache_json, string $home_path = '/' ): string {
-		$cache_name_js    = wp_json_encode( $cache_name );
-		$offline_html_js  = wp_json_encode( self::offline_html() );
-		$home_path_js     = wp_json_encode( rtrim( $home_path, '/' ) );
+		$cache_name_js   = wp_json_encode( $cache_name );
+		$offline_html_js = wp_json_encode( self::offline_html() );
+		$home_path_js    = wp_json_encode( rtrim( $home_path, '/' ) );
 
 		// Ensure json_encode failures do not produce invalid JS.
 		if ( false === $cache_name_js || false === $offline_html_js || false === $home_path_js ) {

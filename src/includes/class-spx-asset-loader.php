@@ -88,7 +88,7 @@ final class AssetLoader
 	 */
 	private function __construct()
 	{
-		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_action( 'wp_enqueue_scripts', [$this, 'enqueue_assets'] );
 	}
 
 	/**
@@ -143,7 +143,7 @@ final class AssetLoader
 		 */
 		static $default_post_types = null;
 		if ( null === $default_post_types ) {
-			$default_post_types = array_keys( get_post_types( [ 'public' => true ] ) );
+			$default_post_types = array_keys( get_post_types( ['public' => true] ) );
 		}
 
 		$allowed_post_types = (array) apply_filters(
@@ -190,8 +190,8 @@ final class AssetLoader
 	 */
 	private static function extract_shortcode_user_ids( \WP_Post $post_obj ): array
 	{
-		$uids = [];
-		$regex = get_shortcode_regex( [ 'spx_photon_vcard' ] );
+		$uids  = [];
+		$regex = get_shortcode_regex( ['spx_photon_vcard'] );
 
 		if ( ! preg_match_all( '/' . $regex . '/s', $post_obj->post_content, $matches, PREG_SET_ORDER ) ) {
 			// has_shortcode() said yes but regex found nothing — defensive fallback.
@@ -206,7 +206,7 @@ final class AssetLoader
 
 		foreach ( $matches as $m ) {
 			$raw_atts = shortcode_parse_atts( $m[3] ?? '' );
-			$atts = is_array( $raw_atts ) ? $raw_atts : [];
+			$atts     = is_array( $raw_atts ) ? $raw_atts : [];
 
 			if ( ! empty( $atts['user_id'] ) && (int) $atts['user_id'] > 0 ) {
 				$uid = (int) $atts['user_id'];
@@ -232,8 +232,8 @@ final class AssetLoader
 	 * user's card data is appended to the global users map via an inline
 	 * script.  Assets (CSS/JS) are enqueued only on the first call.
 	 *
-	 * @param int  $user_id  Author / card owner user ID.
-	 * @param int  $post_id  Associated post ID (used for filter hooks). 0 for shortcode context.
+	 * @param int $user_id  Author / card owner user ID.
+	 * @param int $post_id  Associated post ID (used for filter hooks). 0 for shortcode context.
 	 * @return bool          True when assets and data were successfully enqueued, false when skipped.
 	 */
 	public static function enqueue_for_user( int $user_id, int $post_id = 0 ): bool
@@ -255,7 +255,7 @@ final class AssetLoader
 		// Permission check — only allowed roles receive a card.
 		$allowed_roles = apply_filters(
 			'sparxstar_photon_vcard_allowed_roles',
-			[ 'administrator', 'vip_business_user', 'editor' ],
+			['administrator', 'vip_business_user', 'editor'],
 			$user_id
 		);
 		$allowed_roles = array_values(
@@ -281,11 +281,11 @@ final class AssetLoader
 			}
 		}
 
-		$debug = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG;
+		$debug   = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG;
 		$css_url = $debug
 			? SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'src/css/sparxstar-photon-vcard.css'
 			: SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/css/sparxstar-photon-vcard.min.css';
-		$js_url = $debug
+		$js_url  = $debug
 			? SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'src/js/sparxstar-photon-vcard.js'
 			: SPARXSTAR_PHOTON_VCARD_PLUGIN_URL . 'assets/js/sparxstar-photon-vcard.min.js';
 
@@ -293,7 +293,7 @@ final class AssetLoader
 		if ( ! self::$assets_enqueued ) {
 			// QR library (local asset — no CDN dependency).
 			$script_deps = [];
-			$qr_path = SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'assets/js/qrcode.min.js';
+			$qr_path     = SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'assets/js/qrcode.min.js';
 			if ( file_exists( $qr_path ) ) {
 				wp_register_script(
 					'spx-photon-qrcode',
@@ -305,9 +305,9 @@ final class AssetLoader
 				wp_enqueue_script( 'spx-photon-qrcode' );
 				$script_deps[] = 'spx-photon-qrcode';
 			} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				trigger_error(
-					'SPARXSTAR Photon VCard: qrcode.min.js not found in assets/js/. The QR code feature will be unavailable.',
-					E_USER_WARNING
+				do_action(
+					'sparxstar_photon_vcard_missing_qr_asset',
+					'SPARXSTAR Photon VCard: qrcode.min.js not found in assets/js/. The QR code feature will be unavailable.'
 				);
 			}
 
@@ -346,7 +346,7 @@ final class AssetLoader
 
 		// Append this user's data to the map.
 		// The first user registered also becomes the default (for motion/keyboard triggers).
-		$is_first = empty( self::$localized_users );
+		$is_first  = empty( self::$localized_users );
 		$json_data = wp_json_encode( $card_data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP );
 
 		$inline = 'window.SPX_PHOTON_VCARD_USERS[' . $user_id . ']=' . $json_data . ';';
@@ -410,7 +410,7 @@ final class AssetLoader
 			'fax'    => 'FAX',
 		];
 		// Messaging-type keys are carried as custom channels (not vCard TEL).
-		$messaging_types = [ 'whatsapp', 'telegram', 'signal', 'wechat', 'viber', 'line', 'zalo', 'kakao', 'teams', 'zoom' ];
+		$messaging_types = ['whatsapp', 'telegram', 'signal', 'wechat', 'viber', 'line', 'zalo', 'kakao', 'teams', 'zoom'];
 
 		$phones   = [];
 		$channels = [];
@@ -499,7 +499,7 @@ final class AssetLoader
 
 		if ( $is_photo_public ) {
 			if ( $acf ) {
-				$img = AcfHelper::resolve_image( get_field( 'spx_img_brand_blob', 'user_' . $uid ) );
+				$img   = AcfHelper::resolve_image( get_field( 'spx_img_brand_blob', 'user_' . $uid ) );
 				$photo = $img['url'];
 			}
 			// Fall back to Gravatar only when no ACF image is available.
