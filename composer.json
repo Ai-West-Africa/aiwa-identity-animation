@@ -22,7 +22,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Starisian\\Sparxstar\\Photon\\": "includes/"
+            "Starisian\\Sparxstar\\Photon\\": "src/includes/"
         }
     }
 }

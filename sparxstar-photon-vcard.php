@@ -45,6 +45,6 @@ define( 'SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 /** Plugin base URL (with trailing slash). */
 define( 'SPARXSTAR_PHOTON_VCARD_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
-require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'includes/class-spx-bootloader.php';
+require_once SPARXSTAR_PHOTON_VCARD_PLUGIN_PATH . 'src/includes/class-spx-bootloader.php';
 
 \Starisian\Sparxstar\Photon\Bootloader::boot( __FILE__ );

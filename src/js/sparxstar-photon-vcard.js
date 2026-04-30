@@ -1,4 +1,4 @@
-/**
+/** 
  * SPARXSTAR Photon VCard — front-end runtime.
  *
  * Bootstrapped by WordPress via wp_enqueue_script.  Card data is injected
@@ -19,40 +19,43 @@
  *  – Wake lock while card is visible
  *  – WCAG 2.1 focus trap + keyboard navigation
  *
+ * Bootstrapped by WordPress via wp_enqueue_script.
+ *
+ * Card data is injected via:
+ *   window.SPX_PHOTON_VCARD_USERS
+ *   window.SPX_PHOTON_VCARD_DEFAULT
+ *
  * @package Starisian\Sparxstar\Photon
  */
 (function (window, document) {
   "use strict";
 
-  // 1) SINGLETON LOCK (prevent multi-injection on back/forward cache hits)
   if (window.__SPX_PHOTON_CARD_LOADED__) return;
   window.__SPX_PHOTON_CARD_LOADED__ = true;
 
-  // 2) WordPress-provided per-user card data map (via wp_add_inline_script).
-  // window.SPX_PHOTON_VCARD_USERS  — map of { [uid]: cardData }
-  // window.SPX_PHOTON_VCARD_DEFAULT — UID of the default card (post author / first shortcode user)
   const usersMap =
     window.SPX_PHOTON_VCARD_USERS &&
     typeof window.SPX_PHOTON_VCARD_USERS === "object"
       ? window.SPX_PHOTON_VCARD_USERS
       : {};
+
   const defaultUid = Number(window.SPX_PHOTON_VCARD_DEFAULT) || 0;
 
   class SpxPhotonVCard {
     constructor() {
       this.config = {
-        threshold: 145, // beta (abs) for face-down flip trigger
-        cooldown: 5000, // lockout after close (ms)
-        stabilize: 150, // stabilization window before registering flip (ms)
-        longPress: 800, // long-press duration (ms)
-        sensorFps: 10, // throttle orientation events (fps)
-        sensorAutoDisable: 30000, // battery saver — disable sensors after inactivity (ms)
-        gammaThreshold: 25, // max |gamma| for face-down detection (degrees)
-        permissionTimeout: 2000, // iOS permission promise timeout (ms)
-        shakeThreshold: 324, // squared m/s² magnitude delta triggering a shake count (18² — avoids sqrt)
-        shakeRequired: 3, // shake events required within the window
-        shakeWindow: 1200, // ms window for shake sequence
-        motionThrottle: 120, // minimum ms between processed motion events (~8 Hz, saves CPU/battery)
+        threshold: 145,
+        cooldown: 5000,
+        stabilize: 150,
+        longPress: 800,
+        sensorFps: 10,
+        sensorAutoDisable: 30000,
+        gammaThreshold: 25,
+        permissionTimeout: 2000,
+        shakeThreshold: 324,
+        shakeRequired: 3,
+        shakeWindow: 1200,
+        motionThrottle: 120,
       };
 
       this.state = {
@@ -78,23 +81,18 @@
       this.boundMotionHandler = null;
       this.wakeLock = null;
       this.lastFocus = null;
-      // Registered close-handler for the fullscreen QR overlay (if open).
-      // Stored here so closeCard() can invoke it for proper inert + focus cleanup.
       this._qrFsClose = null;
-      // Active user for the current card display.
+      this._onVisChange = null;
       this.activeUid = defaultUid;
 
       this.init();
     }
 
-    /* ---------------------------
-   INIT
----------------------------- */
-
     init() {
       const reducedMotion =
         window.matchMedia &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
       const defaultData = usersMap[defaultUid] || {};
 
       if (!reducedMotion && !defaultData.noSensor && !this.isLowEndDevice()) {
@@ -104,20 +102,22 @@
       window.addEventListener("pagehide", () => this.releaseWakeLock());
 
       this.setupFallbacks();
-
-      // Attach click handlers to [spx_photon_vcard] shortcode buttons.
       this.setupShortcodeTriggers();
 
-      // Render the floating open-button only when no shortcode triggers are present.
       if (!document.querySelector("[data-spx-vcard-trigger]")) {
         this.renderOpenButton();
       }
+    }
+
+    get d() {
+      return usersMap[this.activeUid] || {};
     }
 
     reportRuntimeError(error, context, extra = {}) {
       if (!error) return;
 
       const message = String(error.message || error);
+
       const payload = {
         event_type: "js_error",
         timestamp: Math.floor(Date.now() / 1000),
@@ -153,37 +153,29 @@
       }
     }
 
-    /** Returns the card data for the currently active user. */
-    get d() {
-      return usersMap[this.activeUid] || {};
-    }
-
     isLowEndDevice() {
       const hc = navigator.hardwareConcurrency;
       const dm = navigator.deviceMemory;
+
       return (
         (typeof hc === "number" && hc <= 4) ||
         (typeof dm === "number" && dm <= 2)
       );
     }
 
-    /* ---------------------------
-   SAFE STORAGE (kiosk / private mode)
----------------------------- */
-
     storage(key, val = null) {
       try {
-        if (val !== null) localStorage.setItem(key, String(val));
-        else return localStorage.getItem(key);
+        if (val !== null) {
+          localStorage.setItem(key, String(val));
+          return null;
+        }
+
+        return localStorage.getItem(key);
       } catch (error) {
         this.reportRuntimeError(error, "storage");
         return null;
       }
     }
-
-    /* ---------------------------
-   MOTION SENSORS
----------------------------- */
 
     setupMotion() {
       const isEnabled = this.storage("spx_photon_motion_enabled") === "true";
@@ -207,10 +199,11 @@
         "aria-label",
         "Enable motion-based card trigger (flip or shake)",
       );
+
       btn.addEventListener(
         "click",
         () => {
-          this.requestSensorAccess();
+          this.requestSensorAccess(true);
           btn.remove();
         },
         { passive: true },
@@ -228,36 +221,50 @@
       btn.textContent = "View Business Card";
       btn.setAttribute("aria-label", "Open digital business card");
       btn.dataset.spxVcardUid = String(defaultUid);
-      btn.addEventListener("click", () => this.openCard("button", defaultUid), {
-        passive: true,
-      });
+
+      btn.addEventListener(
+        "click",
+        () => this.openCard("button", defaultUid),
+        { passive: true },
+      );
 
       document.body.appendChild(btn);
     }
 
     setupShortcodeTriggers() {
       const triggers = document.querySelectorAll("[data-spx-vcard-trigger]");
+
       triggers.forEach((el) => {
         const uid = Number(el.dataset.spxVcardUid) || defaultUid;
+
         el.addEventListener("click", () => this.openCard("shortcode", uid), {
           passive: true,
         });
       });
     }
 
-    async requestSensorAccess() {
+    async requestSensorAccess(fromUserGesture = false) {
       if (this.state.sensorBound) return;
 
       try {
         const needsOrientPerm =
           typeof DeviceOrientationEvent !== "undefined" &&
           typeof DeviceOrientationEvent.requestPermission === "function";
+
         const needsMotionPerm =
           typeof DeviceMotionEvent !== "undefined" &&
           typeof DeviceMotionEvent.requestPermission === "function";
 
         if (needsOrientPerm || needsMotionPerm) {
-          // iOS 13+ requires explicit permission for both sensor types.
+          // On iOS, requestPermission() must be called from a direct user
+          // gesture.  When invoked automatically (e.g. at init or after card
+          // close), skip the permission prompt and show the setup button so
+          // the user can grant access themselves.
+          if (!fromUserGesture) {
+            this.renderSetupButton();
+            return;
+          }
+
           const timeout = setTimeout(
             () => this.renderSetupButton(),
             this.config.permissionTimeout,
@@ -270,6 +277,7 @@
             const r = await DeviceOrientationEvent.requestPermission();
             orientGranted = r === "granted";
           }
+
           if (needsMotionPerm) {
             const r = await DeviceMotionEvent.requestPermission();
             motionGranted = r === "granted";
@@ -282,20 +290,23 @@
           } else {
             this.renderSetupButton();
           }
-        } else {
-          // Android and all other browsers — sensors available implicitly.
-          this.enableSensors(true, true);
+
+          return;
         }
+
+        this.enableSensors(true, true);
       } catch (error) {
+        // Permission request failed (e.g. called outside a user gesture).
+        // Clear the persisted flag so the setup button re-appears on next load.
+        this.storage("spx_photon_motion_enabled", "false");
+        this.renderSetupButton();
         this.reportRuntimeError(error, "requestSensorAccess");
-        // Fallbacks remain active on permission errors.
       }
     }
 
     enableSensors(orientGranted = true, motionGranted = true) {
       if (this.state.sensorBound) return;
 
-      // Flip / face-down detection (orientation permission).
       if (orientGranted) {
         this.boundOrientationHandler = this.handleOrientation.bind(this);
         window.addEventListener(
@@ -305,7 +316,6 @@
         );
       }
 
-      // Shake detection (motion permission).
       if (motionGranted) {
         this.boundMotionHandler = this.handleMotion.bind(this);
         window.addEventListener("devicemotion", this.boundMotionHandler, {
@@ -327,13 +337,16 @@
 
     disableSensors(clearStorageFlag = true) {
       if (!this.state.sensorBound) return;
+
       window.removeEventListener(
         "deviceorientation",
         this.boundOrientationHandler,
       );
+
       if (this.boundMotionHandler) {
         window.removeEventListener("devicemotion", this.boundMotionHandler);
       }
+
       this.state.sensorBound = false;
 
       if (clearStorageFlag) {
@@ -347,14 +360,15 @@
     }
 
     resetSensorAutoDisable() {
-      if (this.timers.sensorAutoDisable)
+      if (this.timers.sensorAutoDisable) {
         clearTimeout(this.timers.sensorAutoDisable);
+      }
+
       this.timers.sensorAutoDisable = setTimeout(() => {
         this.disableSensors(false);
       }, this.config.sensorAutoDisable);
     }
 
-    /* Orientation — single face-down flip */
     handleOrientation(event) {
       if (this.state.isActive) return;
       if (!this.state.sensorBound) return;
@@ -363,11 +377,14 @@
 
       const now = Date.now();
       const minDelta = Math.floor(1000 / this.config.sensorFps);
+
       if (now - this.timers.sensorTick < minDelta) return;
+
       this.timers.sensorTick = now;
 
       const beta = Math.abs(event.beta || 0);
       const gamma = Math.abs(event.gamma || 0);
+
       const isFlat =
         beta > this.config.threshold && gamma < this.config.gammaThreshold;
 
@@ -379,60 +396,63 @@
             this.timers.stabilizer = null;
           }, this.config.stabilize);
         }
-      } else if (!isFlat) {
+
+        return;
+      }
+
+      if (!isFlat) {
         if (this.timers.stabilizer) {
           clearTimeout(this.timers.stabilizer);
           this.timers.stabilizer = null;
         }
+
         this.state.isFaceDown = false;
       }
     }
 
-    /* Motion — shake detection (throttled + sqrt-free for low-end/battery-constrained devices) */
     handleMotion(event) {
       if (this.state.isActive) return;
       if (!this.state.sensorBound) return;
 
-      // Throttle: process at most ~8 Hz to avoid excessive CPU/battery use on low-end hardware.
       const now = Date.now();
-      if (now - this.state.lastMotionTime < this.config.motionThrottle) return;
-      this.state.lastMotionTime = now;
 
+      if (now - this.state.lastMotionTime < this.config.motionThrottle) return;
+
+      this.state.lastMotionTime = now;
       this.resetSensorAutoDisable();
+
       const acc = event.accelerationIncludingGravity;
       if (!acc) return;
 
-      // Compare squared magnitudes — avoids Math.sqrt() entirely.
-      // shakeThreshold is expressed in squared m/s² units (default 324 = 18²).
       const magSq = (acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2;
       const delta = Math.abs(magSq - this.state.lastMagSq);
+
       this.state.lastMagSq = magSq;
 
-      if (delta > this.config.shakeThreshold) {
-        if (
-          !this.state.firstShakeTime ||
-          now - this.state.firstShakeTime > this.config.shakeWindow
-        ) {
-          this.state.shakeCount = 1;
-          this.state.firstShakeTime = now;
-        } else {
-          this.state.shakeCount++;
-          if (this.state.shakeCount >= this.config.shakeRequired) {
-            this.state.shakeCount = 0;
-            this.state.firstShakeTime = 0;
-            this.openCard("shake");
-          }
-        }
+      if (delta <= this.config.shakeThreshold) return;
+
+      if (
+        !this.state.firstShakeTime ||
+        now - this.state.firstShakeTime > this.config.shakeWindow
+      ) {
+        this.state.shakeCount = 1;
+        this.state.firstShakeTime = now;
+        return;
+      }
+
+      this.state.shakeCount++;
+
+      if (this.state.shakeCount >= this.config.shakeRequired) {
+        this.state.shakeCount = 0;
+        this.state.firstShakeTime = 0;
+        this.openCard("shake");
       }
     }
-
-    /* ---------------------------
-   FALLBACKS (Touch & Keyboard)
----------------------------- */
 
     setupFallbacks() {
       document.addEventListener("keydown", (e) => {
         if (this.state.isActive) return;
+
         if (e.shiftKey && (e.key === "V" || e.key === "v")) {
           this.openCard("keyboard");
         }
@@ -442,6 +462,7 @@
 
       const startPress = () => {
         if (this.state.isActive) return;
+
         startY = window.scrollY;
 
         this.timers.longPress = setTimeout(() => {
@@ -463,31 +484,29 @@
       document.addEventListener("touchmove", cancelPress, { passive: true });
     }
 
-    /* ---------------------------
-   UI & LIFECYCLE
----------------------------- */
-
     openCard(triggerMethod, uid) {
       if (Date.now() - this.state.lastCloseTime < this.config.cooldown) return;
+
       if (
         this.state.isActive ||
         document.getElementById("spax-photon-card-overlay")
-      )
+      ) {
         return;
+      }
 
-      // Set the active user for this card display.
-      const resolvedUid =
+      this.activeUid =
         uid !== undefined && usersMap[uid] ? Number(uid) : defaultUid;
-      this.activeUid = resolvedUid;
 
       this.lastFocus = document.activeElement;
       this.state.isActive = true;
-      this.disableSensors();
+
+      this.disableSensors(false);
 
       const openBtn = document.getElementById("spax-photon-open-btn");
       if (openBtn) openBtn.hidden = true;
 
       this.state.scrollPos = window.scrollY;
+
       document.body.style.top = `-${this.state.scrollPos}px`;
       document.body.classList.add("spax-photon-card-active");
 
@@ -508,132 +527,243 @@
 
     injectOverlay() {
       const overlay = document.createElement("div");
+
       overlay.id = "spax-photon-card-overlay";
       overlay.setAttribute("role", "dialog");
       overlay.setAttribute("aria-modal", "true");
       overlay.setAttribute("aria-label", "Digital Business Card");
 
+      overlay.innerHTML = this.renderOverlay();
+
+      document.body.appendChild(overlay);
+
+      this.renderVCardQR();
+      this.attachOverlayActions();
+      this.setupOverlayFocusTrap(overlay);
+
+      const closeBtn = document.getElementById("spax-photon-close-btn");
+
+      setTimeout(() => {
+        if (closeBtn) closeBtn.focus();
+      }, 50);
+    }
+
+    renderOverlay() {
+      return `
+${this.renderCloseButton()}
+
+<div class="spx-vcard-page-wrapper">
+  <div class="spx-card-wrapper">
+    ${this.renderCard()}
+  </div>
+</div>
+`;
+    }
+
+    renderCloseButton() {
+      return `
+<button
+  type="button"
+  class="spax-photon-close"
+  id="spax-photon-close-btn"
+  aria-label="Close business card">
+  &#x2715;
+</button>
+`;
+    }
+
+    renderCard() {
+      return `
+<div class="spx-card-content">
+  ${this.renderIdentityBlock()}
+  ${this.renderQRBlock()}
+  ${this.renderActions()}
+</div>
+`;
+    }
+
+    renderIdentityBlock() {
+      return `
+<div class="spx-identity-block">
+  ${this.renderPhoto()}
+  ${this.renderIdentityText()}
+</div>
+`;
+    }
+
+    renderPhoto() {
+      const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : "";
+      const initials = this.getInitials();
+
+      if (photoSrc) {
+        return `
+<img
+  src="${this.escAttr(photoSrc)}"
+  class="spx-user-photo"
+  alt="${this.escAttr(this.d.name || "")}"
+  width="110"
+  height="110"
+  loading="eager"
+  decoding="async">
+`;
+      }
+
+      return `
+<div
+  class="spx-user-initials"
+  role="img"
+  aria-label="${this.escAttr(
+    this.d.name ? `${this.d.name} initials` : "User initials",
+  )}">
+  ${this.esc(initials)}
+</div>
+`;
+    }
+
+    renderIdentityText() {
       const name = this.esc(this.d.name || "");
       const title = this.esc(this.d.title || "");
       const company = this.esc(this.d.company || "");
 
-      // First phone (for the prominent link on the card face)
+      return `
+<div class="spx-identity-text">
+  ${name ? `<p class="spx-name">${name}</p>` : ""}
+  ${title ? `<p class="spx-title">${title}</p>` : ""}
+  ${company ? `<p class="spx-company">${company}</p>` : ""}
+  ${this.renderPrimaryPhone()}
+</div>
+`;
+    }
+
+    renderPrimaryPhone() {
       const phones = Array.isArray(this.d.phones) ? this.d.phones : [];
-      const toTelHrefValue = (value) => {
-        const raw = String(value || "").trim();
-        if (!raw) return "";
-        const extMatch = raw.match(/(?:ext\.?|x)\s*[:.]?\s*(\d+)$/i);
-        const extension = extMatch ? extMatch[1] : "";
-        const mainPart = extMatch ? raw.slice(0, extMatch.index).trim() : raw;
-        const hasLeadingPlus = /^\s*\+/.test(mainPart);
-        const digits = mainPart.replace(/\D/g, "");
-        if (!digits) return "";
-        return `${hasLeadingPlus ? "+" : ""}${digits}${extension ? `;ext=${extension}` : ""}`;
-      };
 
-      let primaryPhoneHtml = "";
-      if (phones.length) {
-        const firstPhone = phones[0];
-        const telHref = toTelHrefValue(firstPhone.number);
-        if (telHref) {
-          primaryPhoneHtml = `<a class="spx_phone_link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
-        }
+      if (!phones.length || !phones[0] || !phones[0].number) {
+        return "";
       }
 
-      const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : "";
+      const firstPhone = phones[0];
+      const telHref = this.toTelHrefValue(firstPhone.number);
 
-      // Initials fallback: up to 2 characters from first + last name token.
-      const initials =
-        (this.d.name || "")
-          .trim()
-          .split(/\s+/)
-          .filter((w) => w.length > 0)
-          .slice(0, 2)
-          .map((w) => w.charAt(0))
-          .join("")
-          .toUpperCase() || "?";
+      if (!telHref) return "";
 
-      const canSendFile = this._canSendFile();
-      const canShare = this._canShare();
+      return `<a class="spx-phone-link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
+    }
 
-      // SVG icons for action bar
-      const iconSave = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
-      const iconShare = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
-      const iconSend = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
-      const iconWhatsApp = `<svg viewBox="0 0 24 24" aria-hidden="true" class="spx-wa-icon"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.867-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.149-.172.198-.296.298-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>`;
+    renderQRBlock() {
+      return `
+<div
+  id="spax-photon-qr"
+  class="spx-qr-code"
+  role="button"
+  tabindex="0"
+  aria-label="Scan to save contact. Tap to expand QR code fullscreen.">
+</div>
+`;
+    }
 
-      const waUrl = this._whatsappUrl();
-      const sendLabel = this.esc(this._sendButtonLabel());
-
-      overlay.innerHTML = `
-<button type="button" class="spax-photon-close" id="spax-photon-close-btn" aria-label="Close business card">&#x2715;</button>
-
-<div class="spx_vcard_page_wrapper">
-  <div class="spx_card_wrapper">
-    <div class="spx_card_content">
-      ${
-        photoSrc
-          ? `<img src="${this.escAttr(photoSrc)}" class="spx_user_photo" alt="${this.escAttr(this.d.name || "")}" width="90" height="90" loading="eager" decoding="async">`
-          : `<div class="spx_user_photo spx_user_initials" role="img" aria-label="${this.escAttr(this.d.name ? this.d.name + " initials" : "User initials")}">${this.esc(initials)}</div>`
-      }
-      ${name ? `<p class="spx_name">${name}</p>` : ""}
-      ${title ? `<p class="spx_title">${title}</p>` : ""}
-      ${company ? `<p class="spx_company">${company}</p>` : ""}
-      ${primaryPhoneHtml}
-      <div id="spax-photon-qr" class="spx_qr_code" role="button" tabindex="0" aria-label="Scan to save contact. Tap to expand QR code fullscreen."></div>
-      <div class="spx_action_bar" role="group" aria-label="Business card actions">
-        <div class="spx_action_grid">
-          ${
-            waUrl
-              ? `<a class="spx_action_item spx_action_item--whatsapp" href="${this.escAttr(waUrl)}" target="_blank" rel="noopener noreferrer" id="spax-photon-wa-btn" aria-label="Chat on WhatsApp">${iconWhatsApp}</a>`
-              : canSendFile
-                ? `<button type="button" class="spx_action_item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}</button>`
-                : ""
-          }
-          ${
-            canShare
-              ? `<button type="button" class="spx_action_item" id="spax-photon-share-btn" aria-label="Share Link">${iconShare}</button>`
-              : ""
-          }
-          <button type="button" class="spx_action_item" id="spax-photon-save-btn" aria-label="Save Contact">${iconSave}</button>
-        </div>
-      </div>
-    </div>
+    renderActions() {
+      return `
+<div class="spx-action-bar" role="group" aria-label="Business card actions">
+  <div class="spx-action-grid">
+    ${this.renderPrimaryAction()}
+    ${this.renderShareAction()}
+    ${this.renderSaveAction()}
   </div>
 </div>
 `;
+    }
 
-      document.body.appendChild(overlay);
+    renderPrimaryAction() {
+      const waUrl = this._whatsappUrl();
 
-      const focusable = overlay.querySelectorAll(
-        'button, a, [tabindex]:not([tabindex="-1"])',
-      );
-      const closeBtn = document.getElementById("spax-photon-close-btn");
+      if (waUrl) {
+        return `
+<a
+  class="spx-action-item spx-action-item-whatsapp"
+  href="${this.escAttr(waUrl)}"
+  target="_blank"
+  rel="noopener noreferrer"
+  id="spax-photon-wa-btn"
+  aria-label="Chat on WhatsApp">
+  ${this.iconWhatsApp()}
+</a>
+`;
+      }
 
-      this.renderVCardQR();
-      this.attachOverlayActions();
+      if (!this._canSendFile()) return "";
 
-      setTimeout(() => closeBtn && closeBtn.focus(), 50);
+      return `
+<button
+  type="button"
+  class="spx-action-item"
+  id="spax-photon-send-btn"
+  aria-label="${this.esc(this._sendButtonLabel())}">
+  ${this.iconSend()}
+</button>
+`;
+    }
+
+    renderShareAction() {
+      if (!this._canShare()) return "";
+
+      return `
+<button
+  type="button"
+  class="spx-action-item"
+  id="spax-photon-share-btn"
+  aria-label="Share Link">
+  ${this.iconShare()}
+</button>
+`;
+    }
+
+    renderSaveAction() {
+      return `
+<button
+  type="button"
+  class="spx-action-item"
+  id="spax-photon-save-btn"
+  aria-label="Save Contact">
+  ${this.iconSave()}
+</button>
+`;
+    }
+
+    setupOverlayFocusTrap(overlay) {
+      const getFocusable = () =>
+        Array.from(
+          overlay.querySelectorAll(
+            'button, a, [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => el instanceof HTMLElement && !el.hidden);
 
       overlay.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           this.closeCard();
           return;
         }
-        if (e.key === "Tab" && focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (e.shiftKey) {
-            if (document.activeElement === first) {
-              e.preventDefault();
-              last.focus();
-            }
-          } else {
-            if (document.activeElement === last) {
-              e.preventDefault();
-              first.focus();
-            }
+
+        if (e.key !== "Tab") return;
+
+        const focusable = getFocusable();
+        if (!focusable.length) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
           }
+
+          return;
+        }
+
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
         }
       });
     }
@@ -646,28 +776,37 @@
       const overlay = document.getElementById("spax-photon-card-overlay");
       const qrEl = document.getElementById("spax-photon-qr");
 
-      if (sendBtn)
+      if (!overlay) return;
+
+      if (sendBtn) {
         sendBtn.addEventListener("click", () => this.sendToDevice(), {
           passive: true,
         });
-      if (shareBtn)
+      }
+
+      if (shareBtn) {
         shareBtn.addEventListener("click", () => this.shareCard(), {
           passive: true,
         });
-      if (saveBtn)
+      }
+
+      if (saveBtn) {
         saveBtn.addEventListener("click", () => this.downloadVCard(), {
           passive: true,
         });
-      if (closeBtn)
+      }
+
+      if (closeBtn) {
         closeBtn.addEventListener("click", () => this.closeCard(), {
           passive: true,
         });
+      }
 
-      // QR tap → fullscreen mode.
       if (qrEl) {
         qrEl.addEventListener("click", () => this.openQRFullscreen(), {
           passive: true,
         });
+
         qrEl.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -676,13 +815,22 @@
         });
       }
 
-      // Hide broken profile image without an inline onerror (CSP-safe).
-      const photoEl = overlay.querySelector(".spx_user_photo");
+      const photoEl = overlay.querySelector("img.spx-user-photo");
+
       if (photoEl) {
         photoEl.addEventListener(
           "error",
           () => {
-            photoEl.style.display = "none";
+            const fallback = document.createElement("div");
+            fallback.className = "spx-user-initials";
+            fallback.setAttribute("role", "img");
+            fallback.setAttribute(
+              "aria-label",
+              this.d.name ? `${this.d.name} initials` : "User initials",
+            );
+            fallback.textContent = this.getInitials();
+
+            photoEl.replaceWith(fallback);
           },
           { once: true },
         );
@@ -697,16 +845,13 @@
       const overlay = document.getElementById("spax-photon-card-overlay");
       if (!overlay) return;
 
-      // If the fullscreen QR overlay is open, call its registered close handler
-      // so inert-state restoration and cleanup always run before the card closes.
-      // Suppress focus restoration here — closeCard() restores focus to the
-      // original opener exactly once after the card is torn down.
       if (this._qrFsClose) {
         this._qrFsClose({ restoreFocus: false });
       }
 
       document.body.classList.remove("spax-photon-card-active");
       document.body.style.top = "";
+
       window.scrollTo(0, this.state.scrollPos);
 
       this.state.isActive = false;
@@ -717,6 +862,7 @@
         clearTimeout(this.timers.stabilizer);
         this.timers.stabilizer = null;
       }
+
       if (this.timers.longPress) {
         clearTimeout(this.timers.longPress);
         this.timers.longPress = null;
@@ -724,7 +870,11 @@
 
       document.dispatchEvent(
         new CustomEvent("spx-photon-card-event", {
-          detail: { type: "close", timestamp: Date.now() },
+          detail: {
+            type: "close",
+            method: null,
+            timestamp: Date.now(),
+          },
         }),
       );
 
@@ -741,7 +891,9 @@
       const reducedMotion =
         window.matchMedia &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
       const defaultData = usersMap[defaultUid] || {};
+
       if (!reducedMotion && !defaultData.noSensor && !this.isLowEndDevice()) {
         this.requestSensorAccess();
       }
@@ -749,16 +901,15 @@
       this.releaseWakeLock();
     }
 
-    /* ---------------------------
-   SHARE + VCARD + QR
----------------------------- */
-
     shareCard() {
       if (!this._canShare()) return;
+
       navigator
         .share({
           title: this.d.name || "Business Card",
-          text: `${this.d.name || ""}${this.d.title ? " — " + this.d.title : ""}`.trim(),
+          text: `${this.d.name || ""}${
+            this.d.title ? ` — ${this.d.title}` : ""
+          }`.trim(),
           url: window.location.href,
         })
         .catch((error) => {
@@ -780,7 +931,6 @@
           title: this.d.name || "Contact Card",
         });
       } catch (error) {
-        // AbortError = user cancelled — no fallback needed.
         if (error && error.name !== "AbortError") {
           this.reportRuntimeError(error, "sendToDevice");
           this.downloadVCard();
@@ -793,7 +943,9 @@
         String(s || "")
           .replace(/[\r\n]/g, " ")
           .trim();
+
       const ve = (s) => this.vcardEsc(s);
+
       const name = clean(this.d.name);
       const title = clean(this.d.title);
       const company = clean(this.d.company);
@@ -809,8 +961,8 @@
 
       const lines = ["BEGIN:VCARD", "VERSION:3.0", `FN:${ve(name)}`];
 
-      // N field: only emit for exactly "First Last" (two-space-separated tokens).
       const parts = name.split(" ");
+
       if (parts.length === 2) {
         lines.push(`N:${ve(parts[1])};${ve(parts[0])};;;`);
       }
@@ -818,48 +970,54 @@
       if (title) lines.push(`TITLE:${ve(title)}`);
       if (company) lines.push(`ORG:${ve(company)}`);
 
-      // Phone numbers from the repeater (phone-type channels)
       phones.forEach((p) => {
-        if (p && p.number) {
-          const phoneValue = ve(String(p.number).replace(/\s+/g, ""));
-          lines.push(
-            `TEL;TYPE=${(p.type || "VOICE").toUpperCase()}:${phoneValue}`,
-          );
-        }
+        if (!p || !p.number) return;
+
+        const phoneValue = ve(String(p.number).replace(/\s+/g, ""));
+
+        lines.push(
+          `TEL;TYPE=${String(p.type || "VOICE").toUpperCase()}:${phoneValue}`,
+        );
       });
 
-      // Messaging / communications channels
       channels.forEach((c) => {
+        const key = String(c.key || "");
         const cleanVal = ve(String(c.val || "").replace(/\s+/g, ""));
+
         if (!cleanVal) return;
-        switch (c.key) {
+
+        switch (key) {
           case "whatsapp":
             lines.push(`TEL;TYPE=CELL,VOICE:${cleanVal}`);
             lines.push(`X-WHATSAPP:${cleanVal}`);
             break;
+
           case "telegram":
             lines.push(`X-TELEGRAM:${cleanVal}`);
             break;
+
           case "signal":
             lines.push(`X-SIGNAL:${cleanVal}`);
             break;
+
           case "wechat":
             lines.push(`X-WECHAT:${cleanVal}`);
             break;
+
           case "viber":
             lines.push(`X-VIBER:${cleanVal}`);
             break;
+
           default:
             lines.push(
-              `X-${c.key.toUpperCase().replace(/[^A-Z0-9]/g, "")}:${cleanVal}`,
+              `X-${key.toUpperCase().replace(/[^A-Z0-9]/g, "")}:${cleanVal}`,
             );
         }
       });
 
-      if (email) lines.push(`EMAIL:${email}`);
-      if (website) lines.push(`URL:${website}`);
+      if (email) lines.push(`EMAIL:${ve(email)}`);
+      if (website) lines.push(`URL:${ve(website)}`);
 
-      // ADR vCard 3.0 field order: PO-Box;Extended-Addr;Street;City;State;Postal;Country
       const s1 = ve(String(addr.street1 || "").trim());
       const s2 = ve(String(addr.street2 || "").trim());
       const ct = ve(String(addr.city || "").trim());
@@ -871,8 +1029,6 @@
         lines.push(`ADR;TYPE=WORK:;${s2};${s1};${ct};${st};${pc};${co}`);
       }
 
-      // Social media profiles
-      // Map ACF slug values (snake_case) → valid vCard token values.
       const socialMap = {
         amazon_music: "AMAZON-MUSIC",
         apple_music: "APPLE-MUSIC",
@@ -929,34 +1085,38 @@
         youtube_music: "YOUTUBE-MUSIC",
         zhihu: "ZHIHU",
       };
+
       social.forEach((s) => {
-        if (s.val) {
-          const safeVal = this.safeURL(s.val);
-          if (safeVal) {
-            const rawKey = String(clean(s.key) || "")
-              .trim()
-              .toLowerCase();
-            const socialType =
-              socialMap[rawKey] ||
-              rawKey
-                .toUpperCase()
-                .replace(/[^A-Z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "") ||
-              "SOCIAL";
-            lines.push(`X-SOCIALPROFILE;TYPE=${socialType}:${safeVal}`);
-            lines.push(`URL:${safeVal}`);
-          }
-        }
+        if (!s || !s.val) return;
+
+        const safeVal = this.safeURL(s.val);
+        if (!safeVal) return;
+
+        const rawKey = String(clean(s.key) || "")
+          .trim()
+          .toLowerCase();
+
+        const socialType =
+          socialMap[rawKey] ||
+          rawKey
+            .toUpperCase()
+            .replace(/[^A-Z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "") ||
+          "SOCIAL";
+
+        lines.push(`X-SOCIALPROFILE;TYPE=${socialType}:${ve(safeVal)}`);
+        lines.push(`URL:${ve(safeVal)}`);
       });
 
       if (photo) {
         const safePhoto = this.safeURL(photo);
-        if (safePhoto) lines.push(`PHOTO;VALUE=URI:${safePhoto}`);
+        if (safePhoto) lines.push(`PHOTO;VALUE=URI:${ve(safePhoto)}`);
       }
 
       lines.push(
         `REV:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
       );
+
       lines.push("END:VCARD");
 
       return lines.join("\r\n");
@@ -970,11 +1130,14 @@
       const a = document.createElement("a");
       a.href = url;
       a.download = `${(this.d.name || "contact").replace(/[^\w-]+/g, "_")}.vcf`;
+
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
 
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 0);
     }
 
     renderVCardQR() {
@@ -996,19 +1159,16 @@
     ensureQRCodeLib(cb) {
       if (window.QRCode) {
         cb();
-      } else if (typeof console !== "undefined") {
+        return;
+      }
+
+      if (typeof console !== "undefined") {
         console.warn(
           "SpxPhotonVCard: QRCode library not found. Ensure qrcode.min.js is enqueued.",
         );
       }
     }
 
-    /**
-     * Expand the QR code to fill the entire viewport for easy across-the-desk
-     * scanning.  Uses maximum contrast (black on white) and shows a brightness
-     * nudge for outdoor/direct-sunlight use cases.  Escape or tap closes only
-     * this overlay without dismissing the main card.
-     */
     openQRFullscreen() {
       if (document.getElementById("spax-photon-qr-fs")) return;
 
@@ -1018,10 +1178,12 @@
             "SpxPhotonVCard: QRCode library not available — fullscreen QR aborted.",
           );
         }
+
         return;
       }
 
       const fs = document.createElement("div");
+
       fs.id = "spax-photon-qr-fs";
       fs.setAttribute("role", "dialog");
       fs.setAttribute("aria-modal", "true");
@@ -1032,12 +1194,12 @@
       inner.id = "spax-photon-qr-fs-inner";
 
       const tip = document.createElement("p");
-      tip.className = "spx_qr_fs_tip";
+      tip.className = "spx-qr-fs-tip";
       tip.textContent = "☀ Increase brightness for best outdoor scan";
       tip.setAttribute("aria-hidden", "true");
 
       const label = document.createElement("p");
-      label.className = "spx_qr_fs_label";
+      label.className = "spx-qr-fs-label";
       label.textContent = "Tap anywhere to close";
       label.setAttribute("aria-hidden", "true");
 
@@ -1052,20 +1214,24 @@
           width: window.innerWidth,
           height: window.innerHeight,
         };
-        const overlayPaddingPx = 24 * 2;
+
+        const overlayPaddingPx = 48;
         const reservedVerticalSpacePx = 96;
         const maxQrSizePx = 300;
         const minQrSizePx = 160;
+
         const availableWidthPx = Math.max(
           minQrSizePx,
           Math.floor(viewport.width - overlayPaddingPx),
         );
+
         const availableHeightPx = Math.max(
           minQrSizePx,
           Math.floor(
             viewport.height - overlayPaddingPx - reservedVerticalSpacePx,
           ),
         );
+
         const qrSizePx = Math.max(
           minQrSizePx,
           Math.min(maxQrSizePx, availableWidthPx, availableHeightPx),
@@ -1083,7 +1249,9 @@
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null;
+
       const inertSiblings = [];
+
       const focusableSelector = [
         "a[href]",
         "area[href]",
@@ -1100,34 +1268,23 @@
 
       const getFocusableElements = () =>
         Array.from(fs.querySelectorAll(focusableSelector)).filter((el) => {
-          if (!(el instanceof HTMLElement)) {
-            return false;
-          }
+          if (!(el instanceof HTMLElement)) return false;
+          if (el.hidden) return false;
 
-          if (el.hidden) {
-            return false;
-          }
+          const style = window.getComputedStyle(el);
 
-          if (
-            window.getComputedStyle(el).display === "none" ||
-            window.getComputedStyle(el).visibility === "hidden"
-          ) {
-            return false;
-          }
-
-          return true;
+          return style.display !== "none" && style.visibility !== "hidden";
         });
 
       const setBackgroundInert = () => {
         Array.from(document.body.children).forEach((child) => {
-          if (!(child instanceof HTMLElement) || child === fs) {
-            return;
-          }
+          if (!(child instanceof HTMLElement) || child === fs) return;
 
           inertSiblings.push({
             element: child,
             hadInert: child.inert,
           });
+
           child.inert = true;
         });
       };
@@ -1146,6 +1303,7 @@
         if (!restoreFocus) return;
 
         const qrEl = document.getElementById("spax-photon-qr");
+
         if (qrEl instanceof HTMLElement) {
           qrEl.focus();
           return;
@@ -1156,10 +1314,10 @@
         }
       };
 
-      // Store handler on the instance so closeCard() can invoke it for proper cleanup.
       this._qrFsClose = close;
 
       fs.addEventListener("click", close);
+
       fs.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           e.stopPropagation();
@@ -1173,32 +1331,34 @@
           return;
         }
 
-        if (e.key === "Tab") {
-          const focusableElements = getFocusableElements();
+        if (e.key !== "Tab") return;
 
-          if (focusableElements.length === 0) {
+        const focusableElements = getFocusableElements();
+
+        if (!focusableElements.length) {
+          e.preventDefault();
+          fs.focus();
+          return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (
+            document.activeElement === firstElement ||
+            document.activeElement === fs
+          ) {
             e.preventDefault();
-            fs.focus();
-            return;
+            lastElement.focus();
           }
 
-          const firstElement = focusableElements[0];
-          const lastElement = focusableElements[focusableElements.length - 1];
-          const activeElement = document.activeElement;
+          return;
+        }
 
-          if (e.shiftKey) {
-            if (activeElement === firstElement || activeElement === fs) {
-              e.preventDefault();
-              lastElement.focus();
-            }
-
-            return;
-          }
-
-          if (activeElement === lastElement) {
-            e.preventDefault();
-            firstElement.focus();
-          }
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
         }
       });
 
@@ -1207,38 +1367,22 @@
       fs.focus();
     }
 
-    /* ---------------------------
-   WHATSAPP HELPERS
----------------------------- */
-
-    /**
-     * Return the raw WhatsApp number string from the card's channels data,
-     * or an empty string when no WhatsApp channel is configured.
-     */
     _whatsappNumber() {
       const channels = Array.isArray(this.d.channels) ? this.d.channels : [];
       const wa = channels.find((c) => c.key === "whatsapp");
+
       return wa ? String(wa.val || "").trim() : "";
     }
 
-    /**
-     * Build a wa.me deep-link URL from the configured WhatsApp number.
-     * Strips all non-digit characters (spaces, dashes, parentheses, leading +)
-     * so the URL conforms to the wa.me format.  The stored value must already
-     * include the full international country code (e.g. "+27821234567" →
-     * "https://wa.me/27821234567").
-     * Returns an empty string when no WhatsApp channel is configured.
-     */
     _whatsappUrl() {
       const raw = this._whatsappNumber();
+
       if (!raw) return "";
+
       const digits = raw.replace(/[^\d]/g, "");
+
       return digits ? `https://wa.me/${digits}` : "";
     }
-
-    /* ---------------------------
-   WAKE LOCK
----------------------------- */
 
     async keepScreenAwake() {
       if (!("wakeLock" in navigator)) return;
@@ -1248,6 +1392,7 @@
 
         this._onVisChange = async () => {
           if (!this.state.isActive) return;
+
           if (document.visibilityState === "visible" && !this.wakeLock) {
             try {
               this.wakeLock = await navigator.wakeLock.request("screen");
@@ -1275,41 +1420,40 @@
       } catch (error) {
         this.reportRuntimeError(error, "releaseWakeLock");
       }
+
       if (this._onVisChange) {
         document.removeEventListener("visibilitychange", this._onVisChange);
         this._onVisChange = null;
       }
     }
 
-    /* ---------------------------
-   UTILITIES
----------------------------- */
-
     vibrate(pattern) {
-      if (navigator.vibrate && typeof navigator.vibrate === "function") {
-        try {
-          navigator.vibrate(pattern);
-        } catch (error) {
-          this.reportRuntimeError(error, "vibrate");
-        }
+      if (!navigator.vibrate || typeof navigator.vibrate !== "function") return;
+
+      try {
+        navigator.vibrate(pattern);
+      } catch (error) {
+        this.reportRuntimeError(error, "vibrate");
       }
     }
 
     _canShare() {
-      try {
-        return !!(navigator.canShare && navigator.canShare({ text: "x" }));
-      } catch (error) {
-        this.reportRuntimeError(error, "_canShare");
-        return false;
-      }
+      return typeof navigator.share === "function";
     }
 
     _canSendFile() {
-      if (!navigator.canShare) return false;
+      if (
+        typeof navigator.share !== "function" ||
+        typeof navigator.canShare !== "function"
+      ) {
+        return false;
+      }
+
       try {
-        const b = new Blob(["test"], { type: "text/vcard" });
-        const f = new File([b], "test.vcf", { type: "text/vcard" });
-        return navigator.canShare({ files: [f] });
+        const blob = new Blob(["test"], { type: "text/vcard" });
+        const file = new File([blob], "test.vcf", { type: "text/vcard" });
+
+        return navigator.canShare({ files: [file] });
       } catch (error) {
         this.reportRuntimeError(error, "_canSendFile");
         return false;
@@ -1318,25 +1462,114 @@
 
     _sendButtonLabel() {
       const ua = navigator.userAgent || "";
+
       if (/iphone|ipad|ipod/i.test(ua)) return "Send via AirDrop";
       if (/android/i.test(ua)) return "Nearby Share";
+
       return "Send Contact";
     }
 
-    /** Escape a string for safe insertion as HTML text content. */
+    getInitials() {
+      return (
+        (this.d.name || "")
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((w) => w.charAt(0))
+          .join("")
+          .toUpperCase() || "?"
+      );
+    }
+
+    toTelHrefValue(value) {
+      const raw = String(value || "").trim();
+
+      if (raw.length === 0) {
+        return "";
+      }
+
+      let extension = "";
+      let main = raw;
+
+      const lower = raw.toLowerCase();
+      const extIndex = lower.lastIndexOf(" ext");
+
+      if (extIndex !== -1) {
+        const extPart = raw.slice(extIndex);
+        let digits = "";
+
+        for (let i = 0; i < extPart.length; i++) {
+          const c = extPart.charCodeAt(i);
+
+          if (c >= 48 && c <= 57) { // 48-57 = '0'-'9'
+            digits += extPart[i];
+          }
+        }
+
+        if (digits.length > 0) {
+          extension = digits;
+          main = raw.slice(0, extIndex).trim();
+        }
+      }
+
+      let normalized = "";
+      let hasLeadingPlus = false;
+
+      for (let i = 0; i < main.length; i++) {
+        const c = main.charCodeAt(i);
+
+        if (i === 0 && c === 43) { // 43 = '+'
+          hasLeadingPlus = true;
+          continue;
+        }
+
+        if (c >= 48 && c <= 57) { // 48-57 = '0'-'9'
+          normalized += main[i];
+        }
+      }
+
+      if (normalized.length === 0) {
+        return "";
+      }
+
+      let result = hasLeadingPlus ? `+${normalized}` : normalized;
+
+      if (extension) {
+        result += `;ext=${extension}`;
+      }
+
+      return result;
+    }
+
+    iconSave() {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+    }
+
+    iconShare() {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
+    }
+
+    iconSend() {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+    }
+
+    iconWhatsApp() {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true" class="spx-wa-icon"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.867-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.149-.172.198-.296.298-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>`;
+    }
+
     esc(str) {
       if (!str) return "";
+
       const d = document.createElement("div");
       d.textContent = String(str);
+
       return d.innerHTML;
     }
 
-    /**
-     * Escape a plain-text string for embedding in a vCard TEXT value.
-     * Per RFC 2426 §4, backslash, semicolon, comma, and newlines must be escaped.
-     */
     vcardEsc(str) {
       if (!str) return "";
+
       return String(str)
         .replace(/\\/g, "\\\\")
         .replace(/;/g, "\\;")
@@ -1344,9 +1577,9 @@
         .replace(/\r\n|\r|\n/g, "\\n");
     }
 
-    /** Escape a string for safe use in an HTML attribute value. */
     escAttr(str) {
       if (!str) return "";
+
       return String(str)
         .replace(/&/g, "&amp;")
         .replace(/"/g, "&quot;")
@@ -1357,19 +1590,22 @@
 
     safeURL(url) {
       if (!url) return "";
+
       try {
         const u = new URL(url, window.location.href);
-        if (["http:", "https:"].includes(u.protocol)) return u.href;
+
+        if (["http:", "https:"].includes(u.protocol)) {
+          return u.href;
+        }
       } catch {
-        // Invalid or unsupported URL.
+        // Invalid URL.
       }
+
       return "";
     }
   }
 
   function spx_photon_boot() {
-    // Progressive enhancement: enable Houdini animation only when
-    // CSS.registerProperty is available and the user is not data-saving.
     if (
       typeof CSS !== "undefined" &&
       typeof CSS.registerProperty === "function" &&

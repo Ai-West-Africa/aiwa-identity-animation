@@ -4,7 +4,7 @@
 
     <file>sparxstar-photon-vcard.php</file>
     <file>uninstall.php</file>
-    <file>includes/</file>
+    <file>src/includes/</file>
 
     <arg name="basepath" value="."/>
     <arg name="extensions" value="php"/>
