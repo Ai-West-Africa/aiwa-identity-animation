@@ -3,7 +3,7 @@ parameters:
     paths:
         - sparxstar-photon-vcard.php
         - uninstall.php
-        - includes
+        - src/includes
     excludePaths:
         - vendor
         - node_modules
