@@ -117,9 +117,11 @@
       if (!error) return;
 
       const message = String(error.message || error);
-
+      const eventType = extra.eventType || "js_error";
+      const contextData = { ...extra };
+      delete contextData.eventType;
       const payload = {
-        event_type: "js_error",
+        event_type: eventType,
         timestamp: Math.floor(Date.now() / 1000),
         url: window.location.pathname,
         error: {
@@ -132,7 +134,7 @@
         context: {
           plugin: "sparxstar-photon-vcard",
           location: context,
-          ...extra,
+          ...contextData,
         },
       };
 
@@ -533,142 +535,92 @@
       overlay.setAttribute("aria-modal", "true");
       overlay.setAttribute("aria-label", "Digital Business Card");
 
-      overlay.innerHTML = this.renderOverlay();
-
-      document.body.appendChild(overlay);
-
-      this.renderVCardQR();
-      this.attachOverlayActions();
-      this.setupOverlayFocusTrap(overlay);
-
-      const closeBtn = document.getElementById("spax-photon-close-btn");
-
-      setTimeout(() => {
-        if (closeBtn) closeBtn.focus();
-      }, 50);
-    }
-
-    renderOverlay() {
-      return `
-${this.renderCloseButton()}
-
-<div class="spx-vcard-page-wrapper">
-  <div class="spx-card-wrapper">
-    ${this.renderCard()}
-  </div>
-</div>
-`;
-    }
-
-    renderCloseButton() {
-      return `
-<button
-  type="button"
-  class="spax-photon-close"
-  id="spax-photon-close-btn"
-  aria-label="Close business card">
-  &#x2715;
-</button>
-`;
-    }
-
-    renderCard() {
-      return `
-<div class="spx-card-content">
-  ${this.renderIdentityBlock()}
-  ${this.renderQRBlock()}
-  ${this.renderActions()}
-</div>
-`;
-    }
-
-    renderIdentityBlock() {
-      return `
-<div class="spx-identity-block">
-  ${this.renderPhoto()}
-  ${this.renderIdentityText()}
-</div>
-`;
-    }
-
-    renderPhoto() {
-      const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : "";
-      const initials = this.getInitials();
-
-      if (photoSrc) {
-        return `
-<img
-  src="${this.escAttr(photoSrc)}"
-  class="spx-user-photo"
-  alt="${this.escAttr(this.d.name || "")}"
-  width="110"
-  height="110"
-  loading="eager"
-  decoding="async">
-`;
-      }
-
-      return `
-<div
-  class="spx-user-initials"
-  role="img"
-  aria-label="${this.escAttr(
-    this.d.name ? `${this.d.name} initials` : "User initials",
-  )}">
-  ${this.esc(initials)}
-</div>
-`;
-    }
-
-    renderIdentityText() {
       const name = this.esc(this.d.name || "");
       const title = this.esc(this.d.title || "");
       const company = this.esc(this.d.company || "");
 
-      return `
-<div class="spx-identity-text">
-  ${name ? `<p class="spx-name">${name}</p>` : ""}
-  ${title ? `<p class="spx-title">${title}</p>` : ""}
-  ${company ? `<p class="spx-company">${company}</p>` : ""}
-  ${this.renderPrimaryPhone()}
-</div>
-`;
-    }
-
-    renderPrimaryPhone() {
+      // First phone (for the prominent link on the card face)
       const phones = Array.isArray(this.d.phones) ? this.d.phones : [];
+      const toTelHrefValue = (value) => {
+        const raw = String(value || "").trim();
+        if (!raw) return "";
+        const extMatch = raw.match(/(?:ext\.?|x)\s*[:.]?\s*(\d+)$/i);
+        const extension = extMatch ? extMatch[1] : "";
+        const mainPart = extMatch ? raw.slice(0, extMatch.index).trim() : raw;
+        const hasLeadingPlus = /^\s*\+/.test(mainPart);
+        const digits = mainPart.replace(/\D/g, "");
+        if (!digits) return "";
+        return `${hasLeadingPlus ? "+" : ""}${digits}${extension ? `;ext=${extension}` : ""}`;
+      };
 
-      if (!phones.length || !phones[0] || !phones[0].number) {
-        return "";
+      let primaryPhoneHtml = "";
+      if (phones.length) {
+        const firstPhone = phones[0];
+        const telHref = toTelHrefValue(firstPhone.number);
+        if (telHref) {
+          primaryPhoneHtml = `<a class="spx-phone-link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
+        }
       }
 
-      const firstPhone = phones[0];
-      const telHref = this.toTelHrefValue(firstPhone.number);
+      const photoSrc = this.d.photo ? this.safeURL(this.d.photo) : "";
 
-      if (!telHref) return "";
+      // Initials fallback: up to 2 characters from first + last name token.
+      const initials =
+        (this.d.name || "")
+          .trim()
+          .split(/\s+/)
+          .filter((w) => w.length > 0)
+          .slice(0, 2)
+          .map((w) => w.charAt(0))
+          .join("")
+          .toUpperCase() || "?";
 
-      return `<a class="spx-phone-link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
-    }
+      const canSendFile = this._canSendFile();
+      const canShare = this._canShare();
 
-    renderQRBlock() {
-      return `
-<div
-  id="spax-photon-qr"
-  class="spx-qr-code"
-  role="button"
-  tabindex="0"
-  aria-label="Scan to save contact. Tap to expand QR code fullscreen.">
-</div>
-`;
-    }
+      // SVG icons for action bar
+      const iconSave = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+      const iconShare = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
+      const iconSend = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+      const iconWhatsApp = `<svg viewBox="0 0 24 24" aria-hidden="true" class="spx-wa-icon"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.867-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.149-.172.198-.296.298-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>`;
 
-    renderActions() {
-      return `
-<div class="spx-action-bar" role="group" aria-label="Business card actions">
-  <div class="spx-action-grid">
-    ${this.renderPrimaryAction()}
-    ${this.renderShareAction()}
-    ${this.renderSaveAction()}
+      const waUrl = this._whatsappUrl();
+      const sendLabel = this.esc(this._sendButtonLabel());
+
+      overlay.innerHTML = `
+<button type="button" class="spax-photon-close" id="spax-photon-close-btn" aria-label="Close business card">&#x2715;</button>
+
+<div class="spx-vcard-page-wrapper">
+  <div class="spx-card-wrapper">
+    <div class="spx-card-content">
+      ${
+        photoSrc
+          ? `<img src="${this.escAttr(photoSrc)}" class="spx-user-photo" alt="${this.escAttr(this.d.name || "")}" width="90" height="90" loading="eager" decoding="async">`
+          : `<div class="spx-user-photo spx-user-initials" role="img" aria-label="${this.escAttr(this.d.name ? this.d.name + " initials" : "User initials")}">${this.esc(initials)}</div>`
+      }
+      ${name ? `<p class="spx-name">${name}</p>` : ""}
+      ${title ? `<p class="spx-title">${title}</p>` : ""}
+      ${company ? `<p class="spx-company">${company}</p>` : ""}
+      ${primaryPhoneHtml}
+      <div id="spax-photon-qr" class="spx-qr-code" role="button" tabindex="0" aria-label="Scan to save contact. Tap to expand QR code fullscreen."></div>
+      <div class="spx-action-bar" role="group" aria-label="Business card actions">
+        <div class="spx-action-grid">
+          ${
+            waUrl
+              ? `<a class="spx-action-item spx-action-item--whatsapp" href="${this.escAttr(waUrl)}" target="_blank" rel="noopener noreferrer" id="spax-photon-wa-btn" aria-label="Chat on WhatsApp">${iconWhatsApp}</a>`
+              : canSendFile
+                ? `<button type="button" class="spx-action-item" id="spax-photon-send-btn" aria-label="${sendLabel}">${iconSend}</button>`
+                : ""
+          }
+          ${
+            canShare
+              ? `<button type="button" class="spx-action-item" id="spax-photon-share-btn" aria-label="Share Link">${iconShare}</button>`
+              : ""
+          }
+          <button type="button" class="spx-action-item" id="spax-photon-save-btn" aria-label="Save Contact">${iconSave}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 `;
@@ -815,8 +767,8 @@ ${this.renderCloseButton()}
         });
       }
 
-      const photoEl = overlay.querySelector("img.spx-user-photo");
-
+      // Hide broken profile image without an inline onerror (CSP-safe).
+      const photoEl = overlay.querySelector(".spx-user-photo");
       if (photoEl) {
         photoEl.addEventListener(
           "error",
@@ -1159,12 +1111,13 @@ ${this.renderCloseButton()}
     ensureQRCodeLib(cb) {
       if (window.QRCode) {
         cb();
-        return;
-      }
-
-      if (typeof console !== "undefined") {
-        console.warn(
-          "SpxPhotonVCard: QRCode library not found. Ensure qrcode.min.js is enqueued.",
+      } else {
+        this.reportRuntimeError(
+          new Error(
+            "QRCode library not found. Ensure qrcode.min.js is enqueued.",
+          ),
+          "ensureQRCodeLib",
+          { eventType: "capability_failure", capability: "qrcode" },
         );
       }
     }
@@ -1173,12 +1126,11 @@ ${this.renderCloseButton()}
       if (document.getElementById("spax-photon-qr-fs")) return;
 
       if (!window.QRCode) {
-        if (typeof console !== "undefined") {
-          console.warn(
-            "SpxPhotonVCard: QRCode library not available — fullscreen QR aborted.",
-          );
-        }
-
+        this.reportRuntimeError(
+          new Error("QRCode library not available — fullscreen QR aborted."),
+          "openQRFullscreen",
+          { eventType: "capability_failure", capability: "qrcode" },
+        );
         return;
       }
 
@@ -1195,10 +1147,12 @@ ${this.renderCloseButton()}
 
       const tip = document.createElement("p");
       tip.className = "spx-qr-fs-tip";
+      tip.className = "spx-qr-fs-tip";
       tip.textContent = "☀ Increase brightness for best outdoor scan";
       tip.setAttribute("aria-hidden", "true");
 
       const label = document.createElement("p");
+      label.className = "spx-qr-fs-label";
       label.className = "spx-qr-fs-label";
       label.textContent = "Tap anywhere to close";
       label.setAttribute("aria-hidden", "true");

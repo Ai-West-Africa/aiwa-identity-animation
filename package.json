@@ -14,7 +14,7 @@
     "fix:js": "eslint src/js/ --fix",
     "fix:css": "stylelint src/css/ --fix",
     "fix": "npm run fix:js && npm run fix:css",
-    "analyze:php": "vendor/bin/phpstan analyse --no-progress",
+    "analyze:php": "vendor/bin/phpstan analyse --no-progress --memory-limit=1G",
     "analyze": "npm run analyze:php",
     "test": "npm run lint && npm run analyze"
   },
