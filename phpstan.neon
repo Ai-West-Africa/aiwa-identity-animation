@@ -11,6 +11,7 @@ parameters:
     treatPhpDocTypesAsCertain: false
 
     # WordPress stubs provided by szepeviktor/phpstan-wordpress
-    bootstrapFiles: []
+    bootstrapFiles:
+        - phpstan-bootstrap.php
 
     ignoreErrors: []

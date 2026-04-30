@@ -8,7 +8,7 @@ $baseDir = dirname($vendorDir);
 return array(
     'VariableAnalysis\\' => array($vendorDir . '/sirbrillig/phpcs-variable-analysis/VariableAnalysis'),
     'SzepeViktor\\PHPStan\\WordPress\\' => array($vendorDir . '/szepeviktor/phpstan-wordpress/src'),
-    'Starisian\\Sparxstar\\Photon\\' => array($baseDir . '/includes'),
+    'Starisian\\Sparxstar\\Photon\\' => array($baseDir . '/src/includes'),
     'PHPStan\\ExtensionInstaller\\' => array($vendorDir . '/phpstan/extension-installer/src'),
     'PHPCSStandards\\Composer\\Plugin\\Installers\\PHPCodeSniffer\\' => array($vendorDir . '/dealerdirect/phpcodesniffer-composer-installer/src'),
 );

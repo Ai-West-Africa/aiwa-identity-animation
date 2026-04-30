@@ -38,7 +38,7 @@ class ComposerStaticInitb50a558e37e4e148798c8e20b6bd744c
         ),
         'Starisian\\Sparxstar\\Photon\\' =>
         array (
-            0 => __DIR__ . '/../..' . '/includes',
+            0 => __DIR__ . '/../..' . '/src/includes',
         ),
         'PHPStan\\ExtensionInstaller\\' =>
         array (
