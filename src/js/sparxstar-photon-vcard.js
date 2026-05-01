@@ -624,6 +624,11 @@
   </div>
 </div>
 `;
+
+      document.body.appendChild(overlay);
+      this.setupOverlayFocusTrap(overlay);
+      this.attachOverlayActions();
+      this.renderVCardQR();
     }
 
     renderPrimaryAction() {
