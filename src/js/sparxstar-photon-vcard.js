@@ -624,6 +624,19 @@
   </div>
 </div>
 `;
+
+      overlay.setAttribute("tabindex", "-1");
+      document.body.appendChild(overlay);
+      this.setupOverlayFocusTrap(overlay);
+      this.attachOverlayActions();
+      this.renderVCardQR();
+
+      const closeButton = overlay.querySelector("#spax-photon-close-btn");
+      if (closeButton && typeof closeButton.focus === "function") {
+        closeButton.focus({ preventScroll: true });
+      } else if (typeof overlay.focus === "function") {
+        overlay.focus({ preventScroll: true });
+      }
     }
 
     renderPrimaryAction() {
