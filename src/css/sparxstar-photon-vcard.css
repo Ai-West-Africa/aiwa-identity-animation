@@ -27,7 +27,7 @@
   position: fixed;
   inset: 0;
   z-index: 999999;
-  overflow: hidden;
+  overflow-y: auto;
   opacity: 0;
   touch-action: manipulation;
   will-change: opacity;
