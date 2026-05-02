@@ -38,6 +38,13 @@
             }
         ],
 
-        "media-feature-range-notation": "prefix"
+        "media-feature-range-notation": "prefix",
+
+        "property-no-vendor-prefix": [
+            true,
+            {
+                "ignoreProperties": ["background-clip"]
+            }
+        ]
     }
 }

@@ -553,12 +553,15 @@
         return `${hasLeadingPlus ? "+" : ""}${digits}${extension ? `;ext=${extension}` : ""}`;
       };
 
+      // SVG icons
+      const iconPhone = `<svg class="spx-phone-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+
       let primaryPhoneHtml = "";
       if (phones.length) {
         const firstPhone = phones[0];
         const telHref = toTelHrefValue(firstPhone.number);
         if (telHref) {
-          primaryPhoneHtml = `<a class="spx-phone-link" href="tel:${this.escAttr(telHref)}">TEL: ${this.esc(firstPhone.number)}</a>`;
+          primaryPhoneHtml = `<a class="spx-phone-link" href="tel:${this.escAttr(telHref)}" aria-label="Call ${this.esc(firstPhone.number)}">${iconPhone}<span class="spx-phone-sep" aria-hidden="true"></span>${this.esc(firstPhone.number)}</a>`;
         }
       }
 
@@ -578,7 +581,6 @@
       const canSendFile = this._canSendFile();
       const canShare = this._canShare();
 
-      // SVG icons for action bar
       const iconSave = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
       const iconShare = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
       const iconSend = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
@@ -1117,6 +1119,8 @@
           width: 180,
           height: 180,
           correctLevel: QRCode.CorrectLevel.M,
+          colorDark: "#ffffff",
+          colorLight: "#0a0c10",
         });
       });
     }
