@@ -23,6 +23,7 @@
    ========================================== */
 
 :root {
+    --spx-primary: var(--wp--preset--color--primary);
     --spx-neon:   linear-gradient(#00f2ff, #0062ff, #7000ff);
     --spx-card-w: 300px;
     --spx-card-h: 480px;
@@ -119,12 +120,12 @@ display: flex;
 flex-direction: column;
 align-items: center;
 justify-content: flex-start;
-padding: 24px 20px 90px;
+padding: 10px 10px 90px;
 text-align: center;
 overflow: hidden;
 color: #fff;
 box-shadow: 0 20px 60px rgb(0 0 0 / 60%), inset 0 1px 0 rgb(255 255 255 / 5%);
-gap: 6px;
+gap: 3px;
 }
 
 /* ---- Profile photo inside dark card ---- */
@@ -193,20 +194,22 @@ display: none;
 /* ---- Identity text ---- */
 .spx-name {
 font-size: 26px;
-font-weight: 900;
+font-weight: 200;
 letter-spacing: -0.5px;
-margin: 6px 0;
+margin: 3px 0;
 line-height: 1.2;
 color: #fff;
-background: linear-gradient(90deg, #00f2ff, #7000ff);
-background-clip: text;
--webkit-text-fill-color: transparent;
 }
 
 .spx-title {
-font-size: 14px;
+font-size: 12px;
+font-weight:700;
+text-transform: uppercase;
 color: rgb(255 255 255 / 75%);
-margin: 2px 0 10px;
+margin: 1px 0 2px;
+background: linear-gradient(90deg, #00f2ff, #7000ff);
+background-clip: text;
+-webkit-text-fill-color: transparent;
 }
 
 .spx-company {
@@ -215,14 +218,15 @@ font-weight: 700;
 text-transform: uppercase;
 color: rgb(255 255 255 / 50%);
 letter-spacing: 2px;
-margin-bottom: 10px;
+margin-bottom: 5px;
 }
 
 .spx-phone-link {
 margin-top: 6px;
-font-size: 16px;
+font-size: 14px;
 font-weight: 600;
 color: #00f2ff;
+opacity:0.5;
 text-decoration: none;
 }
 
@@ -234,7 +238,7 @@ opacity: 0.8;
 /* ---- Bottom action bar (inside dark card) ---- */
 .spx-action-bar {
 position: absolute;
-bottom: 14px;
+bottom: 8px;
 left: 16px;
 right: 16px;
 background: transparent;
@@ -357,15 +361,15 @@ border: none;
 
 #spax-photon-open-btn {
 left: 20px;
-background: #1c1c1e;
+background: var(--spx-primary);
 color: #fff;
 border: 1px solid rgb(255 255 255 / 15%);
 }
 
 #spax-photon-open-btn:hover {
-background: #fff;
+background: var(--spx-primary);
 color: #000;
-border-color: #fff;
+border-color: var(--spx-primary);
 }
 
 #spax-photon-open-btn:focus-visible,
@@ -383,7 +387,7 @@ justify-content: center;
 gap: 6px;
 padding: 12px 24px;
 min-height: 44px;
-background: #1c1c1e;
+background: var(--spx-primary);
 color: #fff;
 border: 1px solid rgb(255 255 255 / 18%);
 border-radius: 8px;
