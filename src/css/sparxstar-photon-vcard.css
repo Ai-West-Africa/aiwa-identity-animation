@@ -14,7 +14,7 @@
 :root {
   --spx-primary: #0062ff;
   --spx-card-w: 300px;
-  --spx-card-h: 480px;
+  --spx-card-h: 580px;
   --spx-cyan: #00f2ff;
   --spx-blue: #0062ff;
   --spx-purple: #7000ff;
@@ -214,10 +214,9 @@ body.spax-photon-card-active {
 }
 
 .spx-qr-code {
-  width: 188px;
-  height: 188px;
+  width: 200px;
+  height: 200px;
   flex-shrink: 0;
-  margin-top: auto;
   margin-bottom: 20px;
   padding: 10px;
   box-sizing: border-box;
@@ -242,8 +241,6 @@ body.spax-photon-card-active {
 .spx-qr-code canvas,
 .spx-qr-code img {
   display: block;
-  width: 100% !important;
-  height: 100% !important;
 }
 
 .spx-scan-label,
@@ -543,7 +540,7 @@ body.spax-photon-card-active {
 @media (width <= 420px) {
   :root {
     --spx-card-w: 92vw;
-    --spx-card-h: 500px;
+    --spx-card-h: 540px;
   }
 
   .spx-card-content {
@@ -573,12 +570,6 @@ body.spax-photon-card-active {
   .spx-phone-link {
     margin-bottom: 12px;
     font-size: 13px;
-  }
-
-  .spx-qr-code {
-    width: 176px;
-    height: 176px;
-    margin-bottom: 16px;
   }
 
   .spx-action-item {
