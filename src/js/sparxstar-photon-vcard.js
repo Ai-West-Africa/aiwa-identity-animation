@@ -561,7 +561,7 @@
         const firstPhone = phones[0];
         const telHref = toTelHrefValue(firstPhone.number);
         if (telHref) {
-          primaryPhoneHtml = `<a class="spx-phone-link" href="tel:${this.escAttr(telHref)}" aria-label="Call ${this.esc(firstPhone.number)}">${iconPhone}<span class="spx-phone-sep" aria-hidden="true"></span>${this.esc(firstPhone.number)}</a>`;
+          primaryPhoneHtml = `<a class="spx-phone-link" href="tel:${this.escAttr(telHref)}" aria-label="Call ${this.escAttr(firstPhone.number)}">${iconPhone}<span class="spx-phone-sep" aria-hidden="true"></span>${this.esc(firstPhone.number)}</a>`;
         }
       }
 
