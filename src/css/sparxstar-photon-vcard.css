@@ -68,6 +68,7 @@ body.spax-photon-card-active {
 .spx-card-wrapper {
   position: relative;
   width: var(--spx-card-w);
+  max-width: 300px;
   height: var(--spx-card-h);
   overflow: hidden;
   border-radius: 16px;
@@ -528,18 +529,12 @@ body.spax-photon-card-active {
     transition: none;
   }
 
-  .spx-phone-link:hover,
-  .spx-qr-code:hover,
-  .spx-action-item:hover,
-  .spx-action-item:active {
-    transform: none;
-  }
 }
 
 /* Small screens */
-@media (width <= 420px) {
+@media (max-width: 420px) {
   :root {
-    --spx-card-w: 92vw;
+    --spx-card-w: calc(100vw - 32px);
     --spx-card-h: 540px;
   }
 

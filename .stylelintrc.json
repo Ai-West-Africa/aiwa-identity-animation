@@ -36,6 +36,8 @@
             {
                 "message": "Expected keyframe name to follow the spx/spax project prefix convention."
             }
-        ]
+        ],
+
+        "media-feature-range-notation": "prefix"
     }
 }
