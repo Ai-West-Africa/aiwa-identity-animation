@@ -300,10 +300,27 @@ body.spax-photon-card-active {
 }
 
 .spx-action-grid {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.spx-action-grid > .spx-action-item {
+  flex: 1 1 0;
+}
+
+@supports (display: grid) {
+  .spx-action-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 0;
+  }
+
+  .spx-action-grid > .spx-action-item {
+    flex: 0 0 auto;
+  }
 }
 
 .spx-action-item {
