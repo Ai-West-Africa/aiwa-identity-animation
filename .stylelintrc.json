@@ -43,7 +43,7 @@
         "property-no-vendor-prefix": [
             true,
             {
-                "ignoreProperties": ["background-clip"]
+                "ignoreProperties": ["background-clip", "-webkit-overflow-scrolling"]
             }
         ]
     }
