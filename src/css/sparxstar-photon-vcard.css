@@ -12,7 +12,7 @@
 }
 
 :root {
-  --spx-primary: var(--wp--preset--color--primary, #0062ff);
+  --spx-primary: #0062ff;
   --spx-card-w: 300px;
   --spx-card-h: 480px;
   --spx-cyan: #00f2ff;
@@ -303,7 +303,7 @@ body.spax-photon-card-active {
 .spx-action-item svg {
   width: 22px;
   height: 22px;
-  stroke: currentColor;
+  stroke: currentcolor;
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
@@ -321,7 +321,7 @@ body.spax-photon-card-active {
 }
 
 .spx-action-item--whatsapp svg.spx-wa-icon {
-  fill: currentColor;
+  fill: currentcolor;
   stroke: none;
   stroke-width: 0;
 }
@@ -529,7 +529,7 @@ body.spax-photon-card-active {
 }
 
 /* Small screens */
-@media (max-width: 420px) {
+@media (width <= 420px) {
   :root {
     --spx-card-w: 92vw;
     --spx-card-h: 500px;
