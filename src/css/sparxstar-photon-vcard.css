@@ -175,10 +175,17 @@ body.spax-photon-card-active {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: transparent;
-  background: linear-gradient(90deg, var(--spx-cyan), var(--spx-purple));
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: var(--spx-cyan);
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .spx-title {
+    background: linear-gradient(90deg, var(--spx-cyan), var(--spx-purple));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
 }
 
 .spx-title::after {
