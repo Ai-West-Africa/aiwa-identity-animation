@@ -106,8 +106,7 @@ body.spax-photon-card-active {
   align-items: center;
   padding: 24px 18px 18px;
   box-sizing: border-box;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
