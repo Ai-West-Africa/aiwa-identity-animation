@@ -605,6 +605,17 @@ body.spax-photon-card-active {
     transition: none;
   }
 
+  .spx-phone-link:hover,
+  .spx-phone-link:focus,
+  .spx-phone-link:active,
+  .spx-qr-code:hover,
+  .spx-qr-code:focus,
+  .spx-qr-code:active,
+  .spx-action-item:hover,
+  .spx-action-item:focus,
+  .spx-action-item:active {
+    transform: none;
+  }
 }
 
 /* Small screens */
