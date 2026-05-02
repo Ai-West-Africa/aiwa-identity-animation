@@ -516,15 +516,26 @@ body.spax-photon-card-active {
   }
 
   .spx-card-wrapper::before,
+  .spx-houdini .spx-card-wrapper::before,
   .spx-qr-code,
   #spax-photon-open-btn,
   #spax-photon-sensor-grant {
     animation: none;
   }
 
+  .spx-phone-link,
+  .spx-qr-code,
+  .spx-action-item,
   #spax-photon-open-btn,
   #spax-photon-sensor-grant {
     transition: none;
+  }
+
+  .spx-phone-link:hover,
+  .spx-qr-code:hover,
+  .spx-action-item:hover,
+  .spx-action-item:active {
+    transform: none;
   }
 }
 
