@@ -43,7 +43,7 @@
         "property-no-vendor-prefix": [
             true,
             {
-                "ignoreProperties": ["background-clip", "-webkit-overflow-scrolling"]
+                "ignoreProperties": ["background-clip", "-webkit-overflow-scrolling", "-webkit-text-fill-color"]
             }
         ]
     }
