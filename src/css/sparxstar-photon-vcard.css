@@ -355,15 +355,15 @@ body.spax-photon-card-active {
   border-left: none;
 }
 
-.spx-action-item:nth-child(1) {
+:where(.spx-action-item:nth-child(1)) {
   color: var(--spx-cyan);
 }
 
-.spx-action-item:nth-child(2) {
+:where(.spx-action-item:nth-child(2)) {
   color: var(--spx-mid);
 }
 
-.spx-action-item:nth-child(3) {
+:where(.spx-action-item:nth-child(3)) {
   color: var(--spx-purple);
 }
 

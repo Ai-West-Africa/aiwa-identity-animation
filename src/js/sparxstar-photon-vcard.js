@@ -1119,8 +1119,8 @@
           width: 180,
           height: 180,
           correctLevel: QRCode.CorrectLevel.M,
-          colorDark: "#ffffff",
-          colorLight: "#0a0c10",
+          colorDark: "#000000",
+          colorLight: "#ffffff",
         });
       });
     }
