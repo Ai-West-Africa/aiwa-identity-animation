@@ -36,6 +36,15 @@
             {
                 "message": "Expected keyframe name to follow the spx/spax project prefix convention."
             }
+        ],
+
+        "media-feature-range-notation": "prefix",
+
+        "property-no-vendor-prefix": [
+            true,
+            {
+                "ignoreProperties": ["background-clip", "-webkit-overflow-scrolling", "-webkit-text-fill-color"]
+            }
         ]
     }
 }
