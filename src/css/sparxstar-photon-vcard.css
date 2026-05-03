@@ -71,9 +71,7 @@ body.spax-photon-card-active {
 .spx-card-wrapper {
   position: relative;
   width: min(var(--spx-card-w), calc(100vw - 32px));
-  height: var(--spx-card-h);
   overflow: hidden;
-  border-radius: 16px;
   background: #000;
   box-shadow:
     0 24px 70px rgb(0 0 0 / 70%),
