@@ -16,7 +16,7 @@
 
   /* Card dimensions — business-card proportions, scaled for small screens */
   --spx-card-w: 300px;
-  --spx-card-h: 540px;
+  --spx-card-h: 600px;
   --spx-cyan: #00f2ff;
   --spx-blue: #0062ff;
   --spx-mid: #5a30ff;
@@ -71,7 +71,9 @@ body.spax-photon-card-active {
 .spx-card-wrapper {
   position: relative;
   width: min(var(--spx-card-w), calc(100vw - 32px));
+  height: min(var(--spx-card-h), calc(100vh - 80px));
   overflow: hidden;
+  border-radius: 16px;
   background: #000;
   box-shadow:
     0 24px 70px rgb(0 0 0 / 70%),
