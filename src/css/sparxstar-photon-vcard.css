@@ -13,8 +13,8 @@
 
 :root {
   --spx-primary: #0062ff;
-   // width and height business card proportionate
-   // scaled to small size screen
+  /* width and height business card proportionate */
+  /* scaled to small size screen */
   --spx-card-w: 300px;
   --spx-card-h: 540px;
   --spx-cyan: #00f2ff;
