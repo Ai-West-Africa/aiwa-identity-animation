@@ -13,8 +13,10 @@
 
 :root {
   --spx-primary: #0062ff;
+   // width and height business card proportionate
+   // scaled to small size screen
   --spx-card-w: 300px;
-  --spx-card-h: 640px;
+  --spx-card-h: 540px;
   --spx-cyan: #00f2ff;
   --spx-blue: #0062ff;
   --spx-mid: #5a30ff;
@@ -69,8 +71,9 @@ body.spax-photon-card-active {
 .spx-card-wrapper {
   position: relative;
   width: var(--spx-card-w);
-  max-width: 300px;
+  max-width: 600px;
   height: var(--spx-card-h);
+  max-height: 1050px;
   overflow: hidden;
   border-radius: 16px;
   background: #000;
@@ -161,8 +164,8 @@ body.spax-photon-card-active {
 /* Identity text */
 .spx-name {
   margin: 0;
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 300;
   line-height: 1.05;
   letter-spacing: 0.03em;
   color: #fff;
@@ -199,7 +202,7 @@ body.spax-photon-card-active {
 
 .spx-company {
   margin: 6px 0 8px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -213,6 +216,7 @@ body.spax-photon-card-active {
   color: rgb(255 255 255 / 92%);
   font-size: 14px;
   font-weight: 600;
+  letter-spacing: 0.1rem;
   text-decoration: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
@@ -268,10 +272,8 @@ body.spax-photon-card-active {
   height: 240px;
   flex-shrink: 0;
   margin-bottom: 14px;
-  padding: 30px;
   box-sizing: border-box;
   overflow: hidden;
-  border-radius: 18px;
   border: 1px solid rgb(0 120 255 / 25%);
   background: #0a0c10;
   cursor: pointer;
@@ -625,10 +627,10 @@ body.spax-photon-card-active {
 }
 
 /* Small screens */
-@media (max-width: 420px) {
+@media (max-width: 308px) {
   :root {
     --spx-card-w: calc(100vw - 32px);
-    --spx-card-h: 580px;
+    --spx-card-h: 540px;
   }
 
   .spx-card-content {
