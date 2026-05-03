@@ -308,26 +308,8 @@ body.spax-photon-card-active {
 
 .spx-action-grid {
   display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  flex-flow: row nowrap;
   width: 100%;
-}
-
-.spx-action-grid > .spx-action-item {
-  flex: 1 1 0;
-}
-
-@supports (display: grid) {
-  .spx-action-grid {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: 0;
-  }
-
-  .spx-action-grid > .spx-action-item {
-    flex: 0 0 auto;
-  }
 }
 
 .spx-action-item {
@@ -349,6 +331,23 @@ body.spax-photon-card-active {
     transform 0.2s ease,
     background 0.2s ease,
     color 0.2s ease;
+}
+
+.spx-action-grid > .spx-action-item {
+  flex: 1 1 0;
+}
+
+@supports (display: grid) {
+  .spx-action-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 0;
+  }
+
+  .spx-action-grid > .spx-action-item {
+    flex: 0 0 auto;
+  }
 }
 
 .spx-action-item:first-child {
