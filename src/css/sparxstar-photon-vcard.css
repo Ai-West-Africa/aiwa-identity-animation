@@ -408,9 +408,9 @@ body.spax-photon-card-active {
 
 /* Close button */
 .spax-photon-close {
-  position: absolute;
+  position: fixed;
   top: max(14px, env(safe-area-inset-top));
-  right: 16px;
+  right: max(16px, env(safe-area-inset-right));
   z-index: 20;
   width: 38px;
   height: 38px;
