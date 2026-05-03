@@ -13,8 +13,8 @@
 
 :root {
   --spx-primary: #0062ff;
-  /* width and height business card proportionate */
-  /* scaled to small size screen */
+
+  /* Card dimensions — business-card proportions, scaled for small screens */
   --spx-card-w: 300px;
   --spx-card-h: 540px;
   --spx-cyan: #00f2ff;
@@ -70,10 +70,8 @@ body.spax-photon-card-active {
 /* Card shell */
 .spx-card-wrapper {
   position: relative;
-  width: var(--spx-card-w);
-  max-width: 600px;
+  width: min(var(--spx-card-w), calc(100vw - 32px));
   height: var(--spx-card-h);
-  max-height: 1050px;
   overflow: hidden;
   border-radius: 16px;
   background: #000;
@@ -627,7 +625,7 @@ body.spax-photon-card-active {
 }
 
 /* Small screens */
-@media (max-width: 308px) {
+@media (max-width: 332px) {
   :root {
     --spx-card-w: calc(100vw - 32px);
     --spx-card-h: 540px;
