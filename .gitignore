@@ -5,6 +5,9 @@
 node_modules/
 npm-debug.log*
 
+# Composer dependencies
+vendor/
+
 # Core
 #
 # Note: if you want to stage/commit WP core files

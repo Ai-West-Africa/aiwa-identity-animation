@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Minify, Package & Release
+    name: Build, Package & Release
     runs-on: ubuntu-latest
 
     steps:
@@ -34,27 +34,19 @@ jobs:
       - name: Update plugin version in PHP header
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
-          sed -i "s/^\( \* Version:\s*\).*/\1${VERSION}/" sparxstar-photon-vcard.php
-          sed -i "s/^\( \* @version\s*\).*/\1${VERSION}/" sparxstar-photon-vcard.php src/includes/class-spx-asset-loader.php src/includes/class-spx-shortcode.php src/includes/class-spx-acf-fields.php
-          sed -i "s/^\([[:space:]]*\*[[:space:]]*@version[[:space:]]*\).*/\1${VERSION}/" src/css/sparxstar-photon-vcard.css assets/css/sparxstar-photon-vcard.css
-          sed -i "s/define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '[^']*' )/define( 'SPARXSTAR_PHOTON_VCARD_VERSION', '${VERSION}' )/" sparxstar-photon-vcard.php
+          sed -i "s/^\( \* Version:\s*\).*/\1${VERSION}/" aiwa-identity-animation.php
+          sed -i "s/define( 'AIWA_IDENTITY_ANIMATION_VERSION', '[^']*' )/define( 'AIWA_IDENTITY_ANIMATION_VERSION', '${VERSION}' )/" aiwa-identity-animation.php
           sed -i "s/^\*\*Version:\*\* .*/\*\*Version:\*\* ${VERSION}/" README.md
 
-      - name: Minify CSS
-        run: npm run build:css
-
-      - name: Minify JS
-        run: npm run build:js
+      - name: Build block assets
+        run: npm run build
 
       - name: Create release archive
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
-          PLUGIN_SLUG="sparxstar-photon-vcard"
+          PLUGIN_SLUG="aiwa-identity-animation"
           ARCHIVE="${PLUGIN_SLUG}-${VERSION}.zip"
 
-          # Stage plugin files inside a slug-named subdirectory so that
-          # WordPress always installs to the canonical 'sparxstar-photon-vcard/'
-          # directory instead of a versioned path like 'sparxstar-photon-vcard-X.Y.Z/'.
           STAGING="/tmp/${PLUGIN_SLUG}"
           rm -rf "${STAGING}"
           mkdir -p "${STAGING}"
@@ -63,14 +55,17 @@ jobs:
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='node_modules/' \
-            --exclude='src/css/' \
-            --exclude='src/js/' \
+            --exclude='vendor/' \
+            --exclude='src/' \
             --exclude='package.json' \
             --exclude='package-lock.json' \
+            --exclude='composer.json' \
+            --exclude='composer.lock' \
+            --exclude='phpcs.xml' \
+            --exclude='phpstan.neon' \
             --exclude='*.zip' \
             . "${STAGING}/"
 
-          # Build archive with the slug as the single top-level directory.
           ROOT="$PWD"
           cd /tmp
           zip -r "${ROOT}/${ARCHIVE}" "${PLUGIN_SLUG}"
@@ -84,12 +79,11 @@ jobs:
           echo "SHA256=$(cat "${{ env.ARCHIVE }}.sha256")" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
-        # uses: softprops/action-gh-release@v2.6.2
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
-          name: "SPARXSTAR Photon VCard v${{ steps.version.outputs.VERSION }}"
+          name: "AiWA Identity Animation v${{ steps.version.outputs.VERSION }}"
           body: |
-            ## SPARXSTAR Photon VCard v${{ steps.version.outputs.VERSION }}
+            ## AiWA Identity Animation v${{ steps.version.outputs.VERSION }}
 
             ### Installation
             Download `${{ env.ARCHIVE }}` and install via **Plugins → Add New → Upload Plugin** in your WordPress admin.

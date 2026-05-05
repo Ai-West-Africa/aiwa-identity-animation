@@ -1,0 +1,156 @@
+/**
+ * AiWA Identity Animation – Frontend Styles
+ *
+ * Progressive-enhancement strategy:
+ * Layer 0: Base layout / typography — always applied
+ * Layer 1: CSS custom property colours — Chrome 49+ / Android 5.1+
+ * Layer 2: CSS keyframe animations — Chrome 4+ with prefix
+ * Layer 3: @supports guard — modern glows / effects
+ *
+ * Webkit prefixes target Android 4.4 / Chrome 33 (circa 2014).
+ */
+
+/* =====================================================
+   Layer 0 – Base layout
+   ===================================================== */
+
+.wp-block-aiwa-identity-animation {
+	box-sizing: border-box;
+	display: block;
+
+	.aiwa-animation__container {
+		align-items: center;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		padding: 2em 1em;
+		text-align: center;
+		width: 100%;
+	}
+
+	.aiwa-animation__main {
+		color: var(--aiwa-text-color, #fff);
+		font-size: var(--aiwa-font-size, 3em);
+		font-weight: 900;
+		letter-spacing: -0.02em;
+		line-height: 1;
+		margin: 0 0 0.2em;
+	}
+
+	.aiwa-animation__cycle {
+		color: var(--aiwa-accent-color, #00f2a0);
+		font-size: 1.1em;
+		font-weight: 400;
+		letter-spacing: 0.04em;
+		min-height: 1.5em;
+		opacity: 0.9;
+	}
+}
+
+/* =====================================================
+   Layer 2 – CSS Keyframe enter animations
+   Prefixed for Chrome 4 – 42 / Android 4.0 – 4.4
+   ===================================================== */
+
+@-webkit-keyframes aiwa-enter-fade {
+
+	0% {
+		opacity: 0;
+		-webkit-transform: translateY(8px);
+		transform: translateY(8px);
+	}
+
+	100% {
+		opacity: 0.9;
+		-webkit-transform: translateY(0);
+		transform: translateY(0);
+	}
+}
+
+@keyframes aiwa-enter-fade {
+
+	0% {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+
+	100% {
+		opacity: 0.9;
+		transform: translateY(0);
+	}
+}
+
+@-webkit-keyframes aiwa-enter-slide {
+
+	0% {
+		opacity: 0;
+		-webkit-transform: translateX(-14px);
+		transform: translateX(-14px);
+	}
+
+	100% {
+		opacity: 0.9;
+		-webkit-transform: translateX(0);
+		transform: translateX(0);
+	}
+}
+
+@keyframes aiwa-enter-slide {
+
+	0% {
+		opacity: 0;
+		transform: translateX(-14px);
+	}
+
+	100% {
+		opacity: 0.9;
+		transform: translateX(0);
+	}
+}
+
+/* Applied by view.js when a new cycling word enters the DOM */
+
+.wp-block-aiwa-identity-animation:not([data-animation-style="none"]) {
+
+	.aiwa-animation__cycle.is-entering {
+		-webkit-animation: aiwa-enter-fade 0.6s ease forwards;
+		animation: aiwa-enter-fade 0.6s ease forwards;
+	}
+}
+
+.wp-block-aiwa-identity-animation[data-animation-style="slide"] {
+
+	.aiwa-animation__cycle.is-entering {
+		-webkit-animation: aiwa-enter-slide 0.6s ease forwards;
+		animation: aiwa-enter-slide 0.6s ease forwards;
+	}
+}
+
+/* =====================================================
+   Reduced-motion – honour user preference (Chrome 74+, modern devices only)
+   ===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+	.wp-block-aiwa-identity-animation {
+
+		.aiwa-animation__cycle.is-entering {
+			-webkit-animation: none !important; /* stylelint-disable-line declaration-no-important */
+			animation: none !important; /* stylelint-disable-line declaration-no-important */
+		}
+	}
+}
+
+/* =====================================================
+   Layer 3 – Modern enhancements (CSS custom property support required)
+   ===================================================== */
+
+@supports (--test: 0) {
+
+	.wp-block-aiwa-identity-animation {
+
+		.aiwa-animation__main {
+			text-shadow: 0 0 28px rgba(0, 242, 160, 0.2);
+		}
+	}
+}

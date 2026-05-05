@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
-<ruleset name="SPARXSTAR Photon VCard">
-    <description>PHPCS ruleset: WordPress VIP + PSR-12 for SPARXSTAR Photon VCard</description>
+<ruleset name="AiWA Identity Animation">
+    <description>PHPCS ruleset: WordPress + PSR-12 for AiWA Identity Animation</description>
 
-    <file>sparxstar-photon-vcard.php</file>
+    <file>aiwa-identity-animation.php</file>
     <file>uninstall.php</file>
     <file>src/includes/</file>
 
@@ -11,11 +11,10 @@
     <arg name="colors"/>
     <arg value="sp"/>
 
-    <!-- PHP 8.2+ -->
-    <config name="testVersion" value="8.2-"/>
+    <!-- PHP 7.4+ -->
+    <config name="testVersion" value="7.4-"/>
 
-    <!-- WordPress VIP (includes WordPressCS) -->
-    <rule ref="WordPressVIPMinimum"/>
+    <!-- WordPress standards -->
     <rule ref="WordPress-Extra"/>
     <rule ref="WordPress-Docs"/>
 
@@ -23,14 +22,14 @@
     <rule ref="PSR1.Classes.ClassDeclaration"/>
     <rule ref="PSR2.Methods.MethodDeclaration"/>
 
-    <!-- Namespace: Starisian\Sparxstar\Photon -->
+    <!-- Namespace: AiWA\IdentityAnimation -->
     <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
         <properties>
             <property name="prefixes" type="array">
-                <element value="spx_"/>
-                <element value="SPX_"/>
-                <element value="SPARXSTAR_PHOTON_VCARD"/>
-                <element value="Starisian\Sparxstar\Photon"/>
+                <element value="aiwa_"/>
+                <element value="AIWA_"/>
+                <element value="AIWA_IDENTITY_ANIMATION"/>
+                <element value="AiWA\IdentityAnimation"/>
             </property>
         </properties>
     </rule>
@@ -39,33 +38,12 @@
     <rule ref="WordPress.WP.I18n">
         <properties>
             <property name="text_domain" type="array">
-                <element value="sparxstar-photon-vcard"/>
+                <element value="aiwa-identity-animation"/>
             </property>
         </properties>
     </rule>
 
-    <!--
-        PHP 8.2+ / Modern WordPress (6.8+) Exceptions
-        ==================================================
-        The sniffs below are pulled in transitively from PHPCSExtra (Universal.*,
-        NormalizedArrays.*) via vipwpcs/phpcs-extra.  They conflict with current
-        WordPress Core practice and with the project's PHP 8.2+ baseline:
-
-        • Universal.Arrays.DisallowShortArraySyntax — WordPress Core adopted
-          short-array syntax in WP 5.3; PHPStan/Composer/WP-CLI tooling all use [].
-          Short arrays are idiomatic, readable PHP 5.4+ syntax.
-
-        • Universal.Operators.DisallowShortTernary — short ternary (?:) is valid
-          PHP 5.3+ and is used safely in asset-loader null-coalescing patterns.
-
-        • NormalizedArrays.Arrays.ArrayBraceSpacing — companion sniff to the
-          DisallowShortArraySyntax exclusion; would require space-padded [] but
-          that style is inconsistent with WordPress Coding Standards.
-
-        • WordPress.Files.FileName.InvalidClassFileName — all include files in this
-          plugin use the "class-spx-" prefix convention for consistent namespacing.
-          The "spx" segment is intentional and does not need to be removed.
-    -->
+    <!-- Allow short array syntax -->
     <rule ref="Universal.Arrays.DisallowShortArraySyntax">
         <exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
     </rule>
@@ -81,15 +59,7 @@
         <exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
     </rule>
 
-    <!--
-        PSR-12 Brace Style
-        ==================================================
-        This project explicitly includes PSR2.Methods.MethodDeclaration (above)
-        to allow PSR-12 style for method declarations.  PSR-12 uses Allman-style
-        braces (opening brace on its own line) for both class and method
-        declarations.  Exclude the WordPress/K&R enforcement sniffs so they do
-        not conflict with the PSR-12 standard the rest of the codebase follows.
-    -->
+    <!-- PSR-12 Brace Style -->
     <rule ref="Generic.Functions.OpeningFunctionBraceKernighanRitchie">
         <exclude name="Generic.Functions.OpeningFunctionBraceKernighanRitchie.BraceOnNewLine"/>
     </rule>

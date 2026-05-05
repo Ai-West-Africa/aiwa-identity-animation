@@ -1,21 +1,21 @@
 <?php
 /**
- * Uninstall script for SPARXSTAR Photon VCard.
+ * Uninstall script for AiWA Identity Animation.
  *
  * WordPress executes this file directly when the plugin is deleted via the
- * admin UI.  All cleanup logic lives in {@see \Starisian\Sparxstar\Photon\Uninstaller}
+ * admin UI.  All cleanup logic lives in {@see \AiWA\IdentityAnimation\Uninstaller}
  * so no business logic runs in global scope here.
  *
- * @package Starisian\Sparxstar\Photon
+ * @package AiWA\IdentityAnimation
  */
 
 declare(strict_types=1);
 
 // If uninstall not called from WordPress, exit.
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
-	exit;
+exit;
 }
 
-require_once __DIR__ . '/src/includes/class-spx-uninstaller.php';
+require_once __DIR__ . '/src/includes/class-aiwa-uninstaller.php';
 
-\Starisian\Sparxstar\Photon\Uninstaller::run();
+\AiWA\IdentityAnimation\Uninstaller::run();
