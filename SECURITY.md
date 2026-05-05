@@ -1,31 +1,32 @@
-Thanks for helping make SPARXSTAR safe for everyone.
-
 Security
---------
+========
 
-SPARXSTAR takes the security of our software products and services seriously, including all of the open source code repositories managed through our SPARXSTAR organizations, such as [SPARXSTAR](https://github.com/starisian-technologies).
+Thanks for helping make AiWA Identity Animation safe for everyone.
 
-Reporting Security Issues
--------------------------
+AiWA – Ai West Africa takes the security of its open-source projects seriously.
+If you believe you have found a security vulnerability in this repository, please
+report it to us through coordinated disclosure.
 
-If you believe you have found a security vulnerability in any SPARXSTAR-owned repository, please report it to us through coordinated disclosure.
+Reporting a Vulnerability
+--------------------------
 
-Please do not report security vulnerabilities through public SPARXSTAR issues, discussions, or pull requests.
+**Please do not report security vulnerabilities through public GitHub issues,
+discussions, or pull requests.**
 
-Instead, please send an email to support[@]sparxstar.com.
+Instead, open a [GitHub Security Advisory](../../security/advisories/new) or
+send an email to **security@aiwestafrica.com**.
 
-Please include as much of the information listed below as you can to help us better understand and resolve the issue:
+Please include as much of the following information as possible to help us
+understand and resolve the issue quickly:
 
--   The type of issue (e.g., buffer overflow, SQL injection, or cross-site scripting)
--   Full paths of source file(s) related to the manifestation of the issue
--   The location of the affected source code (tag/branch/commit or direct URL)
--   Any special configuration required to reproduce the issue
--   Step-by-step instructions to reproduce the issue
--   Proof-of-concept or exploit code (if possible)
--   Impact of the issue, including how an attacker might exploit the issue
+- The type of issue (e.g. XSS, SQL injection, privilege escalation)
+- Full path(s) of source file(s) related to the issue
+- The affected branch/tag/commit or direct URL
+- Any special configuration required to reproduce the issue
+- Step-by-step instructions to reproduce the issue
+- Proof-of-concept or exploit code (if possible)
+- Impact of the issue, including how an attacker might exploit it
 
 This information will help us triage your report more quickly.
 
 ------
-
-

@@ -1,37 +1,22 @@
-# Starisian Technologies Proprietary License
+# GNU General Public License v2.0
 
-Copyright (c) 2025 Starisian Technologies. All rights reserved.
+Copyright (c) 2025 AiWA – Ai West Africa. All rights reserved.
 
-## Terms and Conditions
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
 
-This software and associated documentation files (the "Software") are proprietary and confidential to Starisian Technologies.
+This program is distributed in the hope that it will be useful, but **WITHOUT
+ANY WARRANTY**; without even the implied warranty of **MERCHANTABILITY** or
+**FITNESS FOR A PARTICULAR PURPOSE**. See the GNU General Public License for
+more details.
 
-### Restrictions
-
-1. **No Distribution**: You may not distribute, sublicense, or transfer copies of the Software to any third party without prior written permission from Starisian Technologies.
-
-2. **No Modification**: You may not modify, adapt, translate, or create derivative works based upon the Software without prior written permission from Starisian Technologies.
-
-3. **No Reverse Engineering**: You may not reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code of the Software.
-
-4. **Limited Use**: The Software is licensed, not sold. Your license to use the Software is limited to the terms and conditions set forth in this agreement.
-
-### Ownership
-
-Starisian Technologies retains all right, title, and interest in and to the Software, including all intellectual property rights therein.
-
-### Termination
-
-This license is effective until terminated. Your rights under this license will terminate automatically without notice if you fail to comply with any of its terms.
-
-### Disclaimer of Warranty
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-
-### Limitation of Liability
-
-IN NO EVENT SHALL STARISIAN TECHNOLOGIES BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 ---
 
-For licensing inquiries, please contact Starisian Technologies.
+The full licence text is available at:
+<https://www.gnu.org/licenses/gpl-2.0.html>
