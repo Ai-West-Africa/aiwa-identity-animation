@@ -1,64 +1,59 @@
 # Terms of Use
 
-**Effective Date**: December 30, 2025
+**Effective Date**: May 2025
 
-## 1. Acceptance of Terms
+## 1. Licence
 
-By accessing or using the SPARXSTAR Photon VCard software (the "Software"), you agree to be bound by these Terms of Use. If you do not agree to these terms, do not use the Software.
+AiWA Identity Animation is free software; you can redistribute it and/or
+modify it under the terms of the **GNU General Public License** as published
+by the Free Software Foundation; either version 2 of the License, or (at
+your option) any later version. See [LICENSE.md](LICENSE.md) for the full
+licence text.
 
-## 2. License Grant
+## 2. Permitted Use
 
-Subject to your compliance with these Terms, Starisian Technologies grants you a limited, non-exclusive, non-transferable, revocable license to use the Software in accordance with the LICENSE.md file included with the Software.
+You may use, copy, modify, and distribute this software for any purpose
+(commercial or non-commercial) in compliance with the GPL-2.0-or-later licence.
 
-## 3. Permitted Use
-
-The Software is designed to provide a secure, accessible, and resilient digital business card overlay. You may use the Software solely for its intended purpose and in compliance with all applicable laws and regulations.
-
-## 4. Prohibited Activities
+## 3. Prohibited Activities
 
 You may not:
-- Use the Software for any unlawful purpose
-- Attempt to gain unauthorized access to the Software or related systems
-- Interfere with or disrupt the integrity or performance of the Software
-- Remove, alter, or obscure any proprietary notices on the Software
-- Use the Software in any manner that could damage, disable, or impair the Software
 
-## 5. Data Privacy
+- Remove, alter, or obscure the copyright notice or licence header in any
+  source file.
+- Sub-license the software under terms that are incompatible with GPL-2.0.
+- Use the AiWA name, logo, or brand elements to endorse or promote products
+  derived from this software without prior written permission from
+  AiWA – Ai West Africa.
 
-Your use of the Software is also governed by our Privacy Policy. By using the Software, you consent to the collection and use of information as described in our Privacy Policy.
+## 4. Trademarks
 
-## 6. Intellectual Property
+"AiWA" and "Ai West Africa" are trademarks of AiWA – Ai West Africa.
+This licence does **not** grant any rights to use these marks.
 
-All intellectual property rights in the Software are owned by Starisian Technologies or its licensors. These Terms do not grant you any rights to use Starisian Technologies' trademarks, logos, or brand elements.
+## 5. Disclaimer of Warranties
 
-## 7. Updates and Modifications
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF
+ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+NON-INFRINGEMENT.
 
-Starisian Technologies reserves the right to modify, suspend, or discontinue the Software at any time without notice. We may also update these Terms from time to time, and your continued use of the Software constitutes acceptance of the updated Terms.
+## 6. Limitation of Liability
 
-## 8. Disclaimer of Warranties
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, AIWA – AI WEST AFRICA SHALL NOT BE
+LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE
+DAMAGES ARISING OUT OF OR RELATED TO YOUR USE OF THE SOFTWARE.
 
-THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+## 7. Updates
 
-## 9. Limitation of Liability
+These Terms may be updated from time to time. Continued use of the software
+constitutes acceptance of the current Terms.
 
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, STARISIAN TECHNOLOGIES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY, OR ANY LOSS OF DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES.
+## 8. Contact
 
-## 10. Indemnification
-
-You agree to indemnify and hold harmless Starisian Technologies from any claims, damages, losses, liabilities, and expenses arising out of your use of the Software or violation of these Terms.
-
-## 11. Governing Law
-
-These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which Starisian Technologies is established, without regard to its conflict of law provisions.
-
-## 12. Termination
-
-Starisian Technologies may terminate or suspend your access to the Software immediately, without prior notice or liability, for any reason, including breach of these Terms.
-
-## 13. Contact Information
-
-For questions about these Terms, please contact Starisian Technologies.
+For questions about these Terms, open an issue or contact
+**hello@aiwestafrica.com**.
 
 ---
 
-Last Updated: December 30, 2025
+Last Updated: May 2025

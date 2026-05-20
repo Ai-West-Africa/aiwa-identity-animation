@@ -1,15 +1,14 @@
 {
-    "name": "starisian-technologies/sparxstar-photon-vcard",
-    "description": "SPARXSTAR Photon VCard — WordPress plugin",
+    "name": "aiwa/aiwa-identity-animation",
+    "description": "AiWA Identity Animation — WordPress Gutenberg block plugin",
     "type": "wordpress-plugin",
-    "license": "proprietary",
+    "license": "GPL-2.0-or-later",
     "require": {
-        "php": ">=8.2"
+        "php": ">=7.4"
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "^3.10",
         "wp-coding-standards/wpcs": "^3.1",
-        "automattic/vipwpcs": "^3.0",
         "phpstan/phpstan": "^2.1",
         "szepeviktor/phpstan-wordpress": "^2.0",
         "phpstan/extension-installer": "^1.4"
@@ -22,7 +21,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Starisian\\Sparxstar\\Photon\\": "src/includes/"
+            "AiWA\\IdentityAnimation\\": "src/includes/"
         }
     }
 }

@@ -1,16 +1,15 @@
 parameters:
     level: 5
     paths:
-        - sparxstar-photon-vcard.php
+        - aiwa-identity-animation.php
         - uninstall.php
         - src/includes
     excludePaths:
         - vendor
         - node_modules
-    phpVersion: 80200
+    phpVersion: 70400
     treatPhpDocTypesAsCertain: false
 
-    # WordPress stubs provided by szepeviktor/phpstan-wordpress
     bootstrapFiles: []
 
     ignoreErrors: []

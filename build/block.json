@@ -1,0 +1,76 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "aiwa/identity-animation",
+  "version": "1.0.0",
+  "title": "AiWA Identity Animation",
+  "category": "media",
+  "icon": "format-video",
+  "description": "Animated brand identity block for AiWA – Ai West Africa. Displays cycling text with graceful degradation for older devices.",
+  "keywords": [
+    "animation",
+    "identity",
+    "brand",
+    "aiwa",
+    "africa",
+    "typewriter"
+  ],
+  "textdomain": "aiwa-identity-animation",
+  "attributes": {
+    "mainText": {
+      "type": "string",
+      "default": "AiWA"
+    },
+    "cycleWords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "Ai West Africa",
+        "Intelligence for Africa",
+        "Building Africa's Future"
+      ]
+    },
+    "fontSize": {
+      "type": "string",
+      "default": "3em"
+    },
+    "textColor": {
+      "type": "string",
+      "default": "#ffffff"
+    },
+    "accentColor": {
+      "type": "string",
+      "default": "#00f2a0"
+    },
+    "backgroundColor": {
+      "type": "string",
+      "default": "#0a0a1a"
+    },
+    "animationStyle": {
+      "type": "string",
+      "enum": [
+        "fade",
+        "slide",
+        "none"
+      ],
+      "default": "fade"
+    }
+  },
+  "supports": {
+    "html": false,
+    "align": [
+      "wide",
+      "full"
+    ],
+    "spacing": {
+      "padding": true,
+      "margin": true
+    }
+  },
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css",
+  "viewScript": "file:./view.js"
+}
